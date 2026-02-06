@@ -1,5 +1,7 @@
 [
   {"from": "billing@service.com", "subject": "Invoice #123", "snippet": "Please pay...", "date": "2026-02-01"},
   {"from": "alerts@bank.com", "subject": "Card payment", "snippet": "Payment 10 EUR", "date": "2026-02-02"},
+  {"from": "alerts@bank.com", "subject": "Card payment", "snippet": "Payment 20 EUR", "date": "2026-02-03"},
+  {"from": "", "subject": "Card payment", "snippet": "Payment 30 EUR", "date": "2026-02-03"},
   {"from": "billing@service.com", "subject": "Invoice #124", "snippet": "Reminder...", "date": "2026-02-03"}
 ]

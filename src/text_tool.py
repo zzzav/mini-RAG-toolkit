@@ -8,7 +8,7 @@ def read_text(text: str | None, in_path: str | None) -> str:
     if text:
         return text
     if in_path:
-        return Path(in_path).read_text(encoding="utf-8")
+        return Path(in_path).read_text(encoding="utf-8", errors="replace")
     raise ValueError("Нужно указать --text или --in")
 
 
@@ -26,10 +26,16 @@ def calc_stats(raw: str, normalized: str) -> dict[str, int]:
     stripped = normalized.strip()
     words = 0 if (stripped == "") else len(stripped.split())
 
-    #
+    # подсчет строк
     lines = 0 if (raw == "") else len(raw.splitlines())
 
-    return {"chars": chars, "words": words, "lines": lines}
+    # подсчет не пустых строк
+    non_empty_lines = 0
+    for line in raw.splitlines():
+        if line.strip() != "":
+            non_empty_lines += 1
+
+    return {"chars": chars, "words": words, "lines": lines, "non_empty_lines": non_empty_lines}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -38,22 +44,41 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--in", dest="in_path", type=str, default=None, help="Путь к входному файлу")
     p.add_argument("--out", dest="out_path", type=str, default=None, help="Путь к выходному файлу")
     p.add_argument("--lower", action="store_true", help="Привести к нижнему регистру")
+    p.add_argument("--upper", action="store_true", help="Привести к верхнему регистру")
+    p.add_argument("--stats_only", action="store_true", help="Только вывести статистику")
     return p
+
+
+def upper_lower_text(text: str, lower: bool, upper: bool) -> str:
+    if upper:
+        return text.upper()
+    elif lower:
+        return text.lower()
+    return text
 
 
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
 
-    raw = read_text(args.text, args.in_path)
+    try:
+        raw = read_text(args.text, args.in_path)
+    except ValueError as e:
+        print(f"ERROR: {e}")
+        raise SystemExit(2)
+
     normalized = normalize_text(raw)
-    if args.lower:
-        normalized = normalized.lower()
+
+    normalized = upper_lower_text(normalized, args.lower, args.upper)
 
     stats = calc_stats(raw, normalized)
 
-    write_text(args.out_path, normalized)
-    print(f"STATS: chars={stats['chars']} words={stats['words']} lines={stats['lines']}")
+    if not args.stats_only:
+        write_text(args.out_path, normalized)
+
+    print(
+        f"STATS: chars={stats['chars']} words={stats['words']} lines={stats['lines']} non_empty_lines={stats['non_empty_lines']}"
+    )
 
 
 if __name__ == "__main__":

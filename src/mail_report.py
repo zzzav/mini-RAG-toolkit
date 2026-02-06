@@ -22,22 +22,34 @@ def clean_mail(m: dict) -> dict:
     }
 
 
-def build_report(mails: list[dict]) -> dict:
-    total = len(mails)
+def build_report(mails: list[dict], domain: str, skip_empty: bool) -> dict:
+    empty = "(empty)"
+    total = 0
     counts: dict[str, int] = {}
+    themes: dict[str, int] = {}
 
     for m in mails:
         sender = m.get("from", "")
-        if sender == "":
-            sender = "(empty)"
-        counts[sender] = counts.get(sender, 0) + 1
+        if ((domain != "") and (sender.endswith("@" + domain))) or (domain == ""):
+            if sender == "":
+                sender = empty
+            if (not skip_empty) or (skip_empty and sender != empty):
+                counts[sender] = counts.get(sender, 0) + 1
+                total += 1
+
+                prefix = m.get("subject", "")
+                if prefix != "":
+                    prefix = prefix.split()[0]
+                else:
+                    prefix = "(empty)"
+                themes[prefix] = themes.get(prefix, 0) + 1
 
     by_sender = [{"from": sender, "count": cnt} for sender, cnt in counts.items()]
-    by_sender.sort(key=lambda x: x["count"], reverse=True)
+    by_sender.sort(key=lambda x: (-x["count"], x["from"]))
 
     top_sender = by_sender[0] if by_sender else {"from": "", "count": 0}
 
-    return {"total": total, "by_sender": by_sender, "top_sender": top_sender}
+    return {"total": total, "by_sender": by_sender, "themes": themes, "top_sender": top_sender}
 
 
 def save_json(path: str, obj: dict) -> None:
@@ -48,6 +60,8 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Mail report from JSON")
     p.add_argument("--in", dest="in_path", required=True)
     p.add_argument("--out", dest="out_path", required=True)
+    p.add_argument("--domain", dest="domain", help="Отчет только по этому домену")
+    p.add_argument("--skip-empty-from", dest="skip_empty", action="store_true")
     return p
 
 
@@ -57,11 +71,17 @@ def main() -> None:
     mails = load_mails(args.in_path)
     cleaned = [clean_mail(m) for m in mails]
 
-    report = build_report(cleaned)
+    domain = args.domain if args.domain else ""
+
+    report = build_report(cleaned, domain, args.skip_empty)
     save_json(args.out_path, report)
 
-    top = report.get("top_sender", {})
-    print(f"TOTAL={report.get('total', 0)} TOP={top.get('from', '')} ({top.get('count', 0)})")
+    top3 = report["by_sender"][:3]
+    top3_lines = []
+    for i, item in enumerate(top3, start=1):
+        top3_lines.append(f"{i}) {item['from']} - {item['count']}")
+
+    print("TOTAL={}\nTOP:\n{}".format(report["total"], "\n".join(top3_lines)))
 
 
 if __name__ == "__main__":
