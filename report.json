@@ -1,0 +1,17 @@
+{
+  "total": 3,
+  "by_sender": [
+    {
+      "from": "billing@service.com",
+      "count": 2
+    },
+    {
+      "from": "alerts@bank.com",
+      "count": 1
+    }
+  ],
+  "top_sender": {
+    "from": "billing@service.com",
+    "count": 2
+  }
+}
