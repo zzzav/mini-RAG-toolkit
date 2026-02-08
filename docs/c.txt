@@ -1,0 +1,3 @@
+Project notes:
+We generate images for the content factory using prompt templates.
+The pipeline is: prompt -> image -> asset store -> publish.

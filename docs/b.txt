@@ -1,0 +1,3 @@
+Bank alerts:
+Card payment 10 EUR. Another payment 5 EUR.
+If suspicious activity happens, freeze the card.

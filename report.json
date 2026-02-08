@@ -1,17 +1,17 @@
 {
-  "total": 2,
-  "by_sender": [
+  "query": "invoice payment",
+  "results": [
     {
-      "from": "billing@service.com",
-      "count": 2
+      "score": 4,
+      "source": "a.txt",
+      "idx": 0,
+      "preview": "Invoice #123 was issued to the client. Payment due in 7 day"
+    },
+    {
+      "score": 2,
+      "source": "b.txt",
+      "idx": 0,
+      "preview": "Bank alerts: Card payment 10 EUR. Another payment 5 EUR. If suspicious activit"
     }
-  ],
-  "themes": {
-    "Invoice": 2,
-    "Card": 3
-  },
-  "top_sender": {
-    "from": "billing@service.com",
-    "count": 2
-  }
+  ]
 }

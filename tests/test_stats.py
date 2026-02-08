@@ -1,5 +1,4 @@
-from src.text_tool import calc_stats
-from src.text_tool import upper_lower_text
+from src.text_tool import calc_stats, upper_lower_text
 
 
 def test_calc_stats_basic():

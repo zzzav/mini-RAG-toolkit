@@ -65,7 +65,7 @@ def main() -> None:
         raw = read_text(args.text, args.in_path)
     except ValueError as e:
         print(f"ERROR: {e}")
-        raise SystemExit(2)
+        raise SystemExit(2) from None
 
     normalized = normalize_text(raw)
 
@@ -77,7 +77,11 @@ def main() -> None:
         write_text(args.out_path, normalized)
 
     print(
-        f"STATS: chars={stats['chars']} words={stats['words']} lines={stats['lines']} non_empty_lines={stats['non_empty_lines']}"
+        "STATS: "
+        f"chars={stats['chars']} "
+        f"words={stats['words']} "
+        f"lines={stats['lines']} "
+        f"non_empty_lines={stats['non_empty_lines']}"
     )
 
 

@@ -1,0 +1,2 @@
+Invoice #123 was issued to the client. Payment due in 7 days.
+If payment is late, send a reminder email.
