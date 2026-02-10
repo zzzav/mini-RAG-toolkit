@@ -75,8 +75,11 @@ def main() -> None:
     if args.query:
         results = search(args.query, index, top_k=args.top)
         print(f"CHUNKS={len(index.chunks)} RESULTS={len(results)}")
-        for score, ch in results:
-            print(f"[{score:.3f}] {ch.source}#{ch.idx}: {ch.text[:120]}...")
+        if results != []:
+            for score, ch in results:
+                print(f"[{score:.3f}] {ch.source}#{ch.idx}: {ch.text[:120]}...")
+        else:
+            print("NO_MATCHES")
 
 
 if __name__ == "__main__":
