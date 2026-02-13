@@ -1,17 +1,20 @@
 {
   "query": "invoice payment",
-  "results": [
+  "hits": [
     {
-      "score": 4,
       "source": "a.txt",
       "idx": 0,
-      "preview": "Invoice #123 was issued to the client. Payment due in 7 day"
+      "score": 0.5103884362815523,
+      "text": "Invoice #123 was issued to the client. Payment due in 7 days.\nIf payment is late, send a reminder email."
     },
     {
-      "score": 2,
       "source": "b.txt",
       "idx": 0,
-      "preview": "Bank alerts: Card payment 10 EUR. Another payment 5 EUR. If suspicious activit"
+      "score": 0.22128692157377686,
+      "text": "Bank alerts:\nCard payment 10 EUR. Another payment 5 EUR.\nIf suspicious activity happens, freeze the card."
     }
-  ]
+  ],
+  "context": "SOURCE=a.txt IDX=0\nInvoice #123 was issued to the client. Payment due in 7 days.\nIf payment is late, send a reminder email.\n---\nSOURCE=b.txt IDX=0\nBank alerts:\nCard payment 10 EUR. Another payment 5 EUR.\nIf suspicious activity happens, freeze the card.",
+  "prompt": "\nSYSTEM:\nТы помощник. Отвечай только на основе CONTEXT. Если в CONTEXT нет ответа — скажи:\n\"В контексте нет информации.\"\n\nUSER:\nВопрос: invoice payment\n\nCONTEXT:\nSOURCE=a.txt IDX=0\nInvoice #123 was issued to the client. Payment due in 7 days.\nIf payment is late, send a reminder email.\n---\nSOURCE=b.txt IDX=0\nBank alerts:\nCard payment 10 EUR. Another payment 5 EUR.\nIf suspicious activity happens, freeze the card.\n\nТребования к ответу:\n- Коротко и по делу (3–8 предложений).\n- Если есть численные данные/сроки/факты — приведи их.\n- Если ответа нет в контексте — явно так и напиши.",
+  "answer": "Ответ:SOURCE=a.txt IDX=0\nInvoice #123 was issued to the client. Payment due in 7 days.\nIf payment is late, send a reminder email.\n---\nSOURCE=b.txt IDX=0\nBank alerts:\nCard payment 10 EUR. Another payment 5 E"
 }

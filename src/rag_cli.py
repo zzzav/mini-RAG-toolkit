@@ -1,4 +1,5 @@
 import argparse
+import json
 import sys
 from pathlib import Path
 from typing import NoReturn
@@ -7,28 +8,17 @@ import src.rag_answer as rag_answer
 import src.vector_search as v_search
 
 
-def get_hits_from_vector_index_search(search_results: list[tuple[float, v_search.Chunk]]) -> dict:
-    hits: list[dict] = []
-    for score, chunk in search_results:
-        hits.append(
-            {
-                "source": chunk.source,
-                "idx": int(chunk.idx),
-                "score": float(score),
-                "text": chunk.text,
-            }
-        )
-
-    return hits
-
-
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="RAG CLI")
-    p.add_argument("--llm", type=str, default="mock")
+    p.add_argument("--llm", type=str, default="mock", choices=["mock", "none"])
     p.add_argument("--q", type=str)
     p.add_argument("--index", dest="index_in", type=str, default=None)
     p.add_argument("--index-out", dest="index_out", default=None)
-    p.add_argument("--format", type=str, default=None)
+
+    # ВАЖНО: format больше не путь
+    p.add_argument("--format", type=str, default="text", choices=["text", "json"])
+    p.add_argument("--out", type=str, default=None)
+
     p.add_argument("--show-prompt", action="store_true")
     p.add_argument("--context-only", action="store_true")
     p.add_argument("--max-context-chars", type=int, default=4000)
@@ -45,13 +35,67 @@ def die(msg: str, code: int = 2) -> NoReturn:
     raise SystemExit(code) from None
 
 
+def get_hits_from_vector_index_search(
+    search_results: list[tuple[float, v_search.Chunk]],
+) -> list[dict]:
+    hits: list[dict] = []
+    for score, chunk in search_results:
+        hits.append(
+            {
+                "source": chunk.source,
+                "idx": int(chunk.idx),
+                "score": float(score),
+                "text": chunk.text,
+            }
+        )
+    return hits
+
+
+def build_report(
+    query: str, hits: list[dict], context: str, prompt: str, answer: str | None
+) -> dict:
+    return {"query": query, "hits": hits, "context": context, "prompt": prompt, "answer": answer}
+
+
+def render_text(report: dict, show_prompt: bool, context_only: bool) -> str:
+    # Текстовый режим: читабельно в консоли
+    if context_only:
+        return "CONTEXT:\n" + (report["context"] or "")
+
+    lines: list[str] = []
+    if report.get("answer"):
+        lines.append(str(report["answer"]))
+    else:
+        lines.append("ANSWER:\n(no answer)")
+
+    # Источники
+    hits = report.get("hits") or []
+    if hits:
+        lines.append("\nSOURCES:")
+        for h in hits:
+            lines.append(f'- {h["source"]}#{h["idx"]} (score={h["score"]:.4f})')
+    else:
+        lines.append("\nSOURCES:\n(none)")
+
+    if show_prompt:
+        lines.append("\nPROMPT:\n" + (report["prompt"] or ""))
+
+    return "\n".join(lines)
+
+
+def write_output(text: str, out_path: str | None) -> None:
+    if out_path:
+        Path(out_path).write_text(text, encoding="utf-8")
+    else:
+        print(text)
+
+
 def main() -> None:
     args = build_parser().parse_args()
     index: v_search.VectorIndex
 
-    # проверка базовых аргументов
     if args.top_k < 1:
-        die("top должен быть >= 1")
+        die("top-k должен быть >= 1")
 
     # режим билда
     if args.docs:
@@ -75,32 +119,42 @@ def main() -> None:
             args.docs, chunk_size=args.chunk_size, overlap=args.overlap
         )
         v_search.save_index(args.index_out, index)
+        return
 
     # режим поиска
-    else:
-        if not args.index_in:
-            die("не задан путь к index")
-        if not args.q:
-            die("не задан поисковой запрос q")
+    if not args.index_in:
+        die("не задан путь к index")
+    if not args.q:
+        die("не задан поисковой запрос q")
 
-        index = v_search.load_index(args.index_in)
-        results = v_search.search(args.q, index, top_k=args.top_k)
-        hits = get_hits_from_vector_index_search(results)
+    index = v_search.load_index(args.index_in)
+    results = v_search.search(args.q, index, top_k=args.top_k)
+    hits = get_hits_from_vector_index_search(results)
 
-        rag_cfg = rag_answer.RAGConfig(
-            max_context_chars=args.max_context_chars,
-            per_chunk_chars=args.per_chunk_chars,
-            top_k=args.top_k,
-        )
+    rag_cfg = rag_answer.RAGConfig(
+        max_context_chars=args.max_context_chars,
+        per_chunk_chars=args.per_chunk_chars,
+        top_k=args.top_k,
+    )
 
-        context = rag_answer.build_context(hits, rag_cfg)
+    context = rag_answer.build_context(hits, rag_cfg)
+
+    prompt = ""
+    answer: str | None = None
+
+    if not args.context_only:
         prompt = rag_answer.build_prompt(args.q, context)
+        if args.llm == "mock":
+            answer = rag_answer.MockLLM().generate(prompt)
+        else:
+            answer = None
 
-        mock_llm = rag_answer.MockLLM()
+    report = build_report(args.q, hits, context, prompt, answer)
 
-        answer = mock_llm.generate(prompt) if args.llm == "mock" else "Ручной ответ"
-
-        print(answer)
+    if args.format == "json":
+        write_output(json.dumps(report, ensure_ascii=False, indent=2), args.out)
+    else:
+        write_output(render_text(report, args.show_prompt, args.context_only), args.out)
 
 
 if __name__ == "__main__":
