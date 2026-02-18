@@ -1,0 +1,18 @@
+ACCOUNT SECURITY
+
+1) Password reset instructions
+If you forgot your password:
+- Click “Forgot password” on the login page.
+- Enter your account email.
+- Follow the password reset link sent to your email.
+The reset link expires after 60 minutes.
+
+2) Two-factor authentication setup
+To enable 2FA:
+- Go to Settings → Security → Two-factor authentication.
+- Scan the QR code with an authenticator app.
+- Enter the 6-digit code to confirm.
+Store your recovery codes in a safe place.
+
+3) Security tips
+Use a unique password, update it regularly, and avoid sharing credentials.

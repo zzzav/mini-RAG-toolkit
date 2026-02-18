@@ -1,0 +1,61 @@
+PRICING & BILLING
+
+1) Pricing plan monthly cost
+Plans:
+- Starter: 19 EUR/month
+- Pro: 49 EUR/month
+- Business: 99 EUR/month
+Annual billing offers a discount compared to monthly billing.
+
+2) Cancel subscription and billing
+You can cancel at any time in the billing portal:
+Billing → Subscription → Cancel.
+Cancellation takes effect at the end of the current billing period. You will not be charged again.
+
+3) Change billing details company name
+To update billing details (company name, address, VAT ID):
+Billing → Settings → Billing details → Save changes.
+These changes apply to future invoices; past invoices cannot be edited, but we can issue a corrected invoice
+in certain jurisdictions.
+
+[APPENDIX 1]
+PRICING & BILLING
+
+1) Pricing plan monthly cost
+Plans:
+- Starter: 19 EUR/month
+- Pro: 49 EUR/month
+- Business: 99 EUR/month
+Annual billing offers a discount compared to monthly billing.
+
+2) Cancel subscription and billing
+You can cancel at any time in the billing portal:
+Billing → Subscription → Cancel.
+Cancellation takes effect at the end of the current billing period. You will not be charged again.
+
+3) Change billing details company name
+To update billing details (company name, address, VAT ID):
+Billing → Settings → Billing details → Save changes.
+These changes apply to future invoices; past invoices cannot be edited, but we can issue a corrected invoice
+in certain jurisdictions.
+
+[APPENDIX 2]
+PRICING & BILLING
+
+1) Pricing plan monthly cost
+Plans:
+- Starter: 19 EUR/month
+- Pro: 49 EUR/month
+- Business: 99 EUR/month
+Annual billing offers a discount compared to monthly billing.
+
+2) Cancel subscription and billing
+You can cancel at any time in the billing portal:
+Billing → Subscription → Cancel.
+Cancellation takes effect at the end of the current billing period. You will not be charged again.
+
+3) Change billing details company name
+To update billing details (company name, address, VAT ID):
+Billing → Settings → Billing details → Save changes.
+These changes apply to future invoices; past invoices cannot be edited, but we can issue a corrected invoice
+in certain jurisdictions.

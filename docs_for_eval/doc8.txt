@@ -1,0 +1,13 @@
+CONTRACTS & SLA
+
+1) Contract termination notice period
+Either party may terminate the contract with 30 days written notice, unless the contract states otherwise.
+Immediate termination may apply in case of material breach.
+
+2) SLA uptime guarantee
+We provide an uptime guarantee of 99.9% per calendar month for the core service.
+If uptime falls below the guarantee, you may be eligible for service credits as described below.
+
+3) Service credits
+Credits are calculated as a percentage of the monthly fee depending on the downtime window.
+Claims must be submitted within 10 business days after the incident.
