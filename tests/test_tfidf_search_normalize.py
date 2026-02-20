@@ -1,4 +1,4 @@
-from src.tfidf_search import tfidf_search, Chunk, build_index
+from src.tfidf_search import Chunk, build_index, tfidf_search
 
 
 def test_using_stop_words():

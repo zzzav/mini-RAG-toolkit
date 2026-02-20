@@ -15,7 +15,7 @@ def expand_tokens(
 
     for t in tokens:
 
-        if not t in out_tokens:
+        if t not in out_tokens:
             out_tokens.append(t)
 
         if not synonyms:

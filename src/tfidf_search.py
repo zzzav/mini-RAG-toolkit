@@ -1,7 +1,6 @@
 import argparse
 import json
 import math
-import re
 from pathlib import Path
 
 from src.query_normalize import DEFAULT_STOP_WORDS, normalize_query

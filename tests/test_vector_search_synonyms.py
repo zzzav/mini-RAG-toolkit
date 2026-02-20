@@ -1,6 +1,6 @@
 from src.vector_search import (
-    build_vector_index_by_chunks,
     build_chunks,
+    build_vector_index_by_chunks,
     search,
 )
 
