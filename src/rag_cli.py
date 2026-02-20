@@ -27,6 +27,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--overlap", type=int, default=80)
     p.add_argument("--top-k", type=int, default=5)
     p.add_argument("--docs", type=str)
+    p.add_argument("--use-synonyms", action="store_true")
+    p.add_argument("--no-stop-words", action="store_true")
     return p
 
 
@@ -128,7 +130,13 @@ def main() -> None:
         die("не задан поисковой запрос q")
 
     index = v_search.load_index(args.index_in)
-    results = v_search.search(args.q, index, top_k=args.top_k)
+    results = v_search.search(
+        args.q,
+        index,
+        top_k=args.top_k,
+        use_synonyms=args.use_synonyms,
+        use_stop_words=not args.no_stop_words,
+    )
     hits = get_hits_from_vector_index_search(results)
 
     rag_cfg = rag_answer.RAGConfig(

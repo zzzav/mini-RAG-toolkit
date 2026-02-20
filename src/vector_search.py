@@ -7,7 +7,9 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+from src.query_normalize import DEFAULT_STOP_WORDS, normalize_query
 from src.simple_search import Chunk, build_chunks, load_text_files
+from src.synonyms import expand_tokens, DEFAULT_SYNONYMS
 
 
 @dataclass
@@ -19,7 +21,7 @@ class VectorIndex:
 
 def build_vector_index_by_chunks(chunks: list[Chunk]) -> VectorIndex:
     texts = [c.text for c in chunks]
-    vectorizer = TfidfVectorizer(lowercase=True, stop_words="english", min_df=1)
+    vectorizer = TfidfVectorizer(lowercase=True, min_df=1)
     matrix = vectorizer.fit_transform(texts)  # sparse matrix
 
     return VectorIndex(vectorizer=vectorizer, matrix=matrix, chunks=chunks)
@@ -34,8 +36,30 @@ def build_vector_index(docs_dir: str, chunk_size: int, overlap: int) -> VectorIn
     return vector_index
 
 
-def search(query: str, index: VectorIndex, top_k: int) -> list[tuple[float, Chunk]]:
-    q_vec = index.vectorizer.transform([query])
+def search(
+    query: str,
+    index: VectorIndex,
+    top_k: int,
+    use_synonyms: bool = False,
+    use_stop_words: bool = True,
+    debug: bool = False,
+) -> list[tuple[float, Chunk]]:
+
+    stop_words = ()
+    if use_stop_words:
+        stop_words = DEFAULT_STOP_WORDS
+
+    tokens = normalize_query(query, stop_words=stop_words)
+    if use_synonyms:
+        tokens = expand_tokens(tokens=tokens, synonyms=DEFAULT_SYNONYMS)
+
+    normalized_query = " ".join(tokens)
+    if normalized_query == "":
+        return []
+    elif debug:
+        print(f"query={normalized_query}")
+
+    q_vec = index.vectorizer.transform([normalized_query])
     sims = cosine_similarity(q_vec, index.matrix).ravel()
     # top-k indices
     top_idx = np.argsort(-sims)[:top_k]
@@ -59,6 +83,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--overlap", type=int, default=80)
     p.add_argument("--build-index", dest="build_index_path", default=None)
     p.add_argument("--use-index", dest="use_index_path", default=None)
+    p.add_argument("--debug", action="store_true", default=False)
     return p
 
 
@@ -73,7 +98,7 @@ def main() -> None:
             save_index(args.build_index_path, index)
 
     if args.query:
-        results = search(args.query, index, top_k=args.top)
+        results = search(args.query, index, top_k=args.top, debug=args.debug)
         print(f"CHUNKS={len(index.chunks)} RESULTS={len(results)}")
         if results != []:
             for score, ch in results:

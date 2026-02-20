@@ -4,6 +4,7 @@ import math
 import re
 from pathlib import Path
 
+from src.query_normalize import DEFAULT_STOP_WORDS, normalize_query
 from src.simple_search import (
     Chunk,
     build_chunks,
@@ -19,12 +20,11 @@ from src.simple_search import (
 # tokenize  получение перечня слов в рамках
 #           текстового блока
 #####################################################
-def tokenize(text: str) -> list[str]:
-    stop_words = {"the", "a", "an", "and", "or", "to", "in", "of"}
-    text_clean = re.sub(r"[,.:;!?()]", "", text.lower())
-    tokens = [w for w in text_clean.split() if w and w not in stop_words]
-
-    return tokens
+def tokenize(text: str, use_stop_words: bool = True) -> list[str]:
+    stop_words = ()
+    if use_stop_words:
+        stop_words = DEFAULT_STOP_WORDS
+    return normalize_query(text, stop_words=stop_words)
 
 
 #####################################################
@@ -44,7 +44,7 @@ def count_tf(tokens: list[str]) -> dict[str, int]:
 # build_index   построение поисковых метрик
 #
 #####################################################
-def build_index(chunks: list[Chunk]) -> dict:
+def build_index(chunks: list[Chunk], use_stop_words: bool = True) -> dict:
 
     # частота слов внутри чанков
     tf_list = []
@@ -55,7 +55,7 @@ def build_index(chunks: list[Chunk]) -> dict:
     chunk_meta_list = []
 
     for chunk in chunks:
-        tokens = tokenize(chunk.text)
+        tokens = tokenize(chunk.text, use_stop_words)
         tf_counts = count_tf(tokens)
         tf_list.append(tf_counts)
         unique_words = set(tf_counts.keys())
@@ -84,12 +84,12 @@ def build_index(chunks: list[Chunk]) -> dict:
 #
 #####################################################
 def tfidf_search(
-    query: str, chunks: list[Chunk], index: dict, top_k: int = 5
+    query: str, chunks: list[Chunk], index: dict, top_k: int = 5, use_stop_words: bool = True
 ) -> list[tuple[float, Chunk]]:
 
     scored: list[tuple[float, Chunk]] = []
 
-    q_words = tokenize(query)
+    q_words = tokenize(query, use_stop_words)
 
     for i, chunk in enumerate(chunks):
         score = 0.0
