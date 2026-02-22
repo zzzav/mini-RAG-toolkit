@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Literal
 
 g_base_prompt: str = """
 SYSTEM:
@@ -37,10 +38,11 @@ class RAGConfig:
 @dataclass
 class RAGResult:
     query: str
-    chunks: list[Chunk]
+    chunks: list[dict]
     context: str
     prompt: str
     answer: str | None
+    citations: list[dict]
 
 
 ###############################################################
@@ -78,6 +80,54 @@ def build_prompt(question: str, context: str) -> str:
     prompt = g_base_prompt.replace("{question}", question).replace("{context}", context)
 
     return prompt
+
+
+def rag_answer(
+    question: str,
+    hits: list[dict],
+    cfg: RAGConfig,
+    *,
+    llm: Literal["mock", "none"] = "mock",
+) -> RAGResult:
+
+    context = build_context(hits, cfg)
+    prompt = "" if llm == "none" else build_prompt(question, context)
+    answer = None if llm == "none" else MockLLM().generate(prompt)
+    citations = collect_citations(hits, max_items=cfg.top_k)
+    chunks = [
+        {
+            "source": h["source"],
+            "idx": int(h["idx"]),
+            "score": float(h["score"]),
+            "text_preview": h["text"][:200],
+        }
+        for h in hits
+    ]
+
+    return RAGResult(
+        query=question,
+        chunks=chunks,
+        context=context,
+        prompt=prompt,
+        answer=answer,
+        citations=citations,
+    )
+
+
+def collect_citations(hits: list[dict], *, max_items: int | None = None) -> list[dict]:
+
+    citations: list[dict] = []
+
+    for hit in hits:
+        if not any(
+            c.get("source") == hit["source"] and c.get("idx") == hit["idx"] for c in citations
+        ):
+            citations.append({"source": hit["source"], "idx": hit["idx"]})
+            if max_items:
+                if len(citations) == max_items:
+                    break
+
+    return citations
 
 
 @dataclass

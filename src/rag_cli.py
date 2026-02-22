@@ -1,6 +1,7 @@
 import argparse
 import json
 import sys
+from dataclasses import asdict
 from pathlib import Path
 from typing import NoReturn
 
@@ -54,33 +55,51 @@ def get_hits_from_vector_index_search(
 
 
 def build_report(
-    query: str, hits: list[dict], context: str, prompt: str, answer: str | None
+    query: str,
+    hits: list[dict],
+    context: str,
+    prompt: str,
+    answer: str | None,
+    citiations: list[dict],
 ) -> dict:
-    return {"query": query, "hits": hits, "context": context, "prompt": prompt, "answer": answer}
+    return {
+        "query": query,
+        "hits": hits,
+        "context": context,
+        "prompt": prompt,
+        "answer": answer,
+        "citiations": citiations,
+    }
 
 
-def render_text(report: dict, show_prompt: bool, context_only: bool) -> str:
+def render_text(res: rag_answer.RAGResult, show_prompt: bool, context_only: bool) -> str:
     # Текстовый режим: читабельно в консоли
     if context_only:
-        return "CONTEXT:\n" + (report["context"] or "")
+        return "CONTEXT:\n" + (res.context or "")
 
     lines: list[str] = []
-    if report.get("answer"):
-        lines.append(str(report["answer"]))
+    if res.answer:
+        lines.append(str(res.answer))
     else:
         lines.append("ANSWER:\n(no answer)")
 
     # Источники
-    hits = report.get("hits") or []
-    if hits:
-        lines.append("\nSOURCES:")
-        for h in hits:
-            lines.append(f'- {h["source"]}#{h["idx"]} (score={h["score"]:.4f})')
+    if res.chunks:
+        lines.append("SOURCES:")
+        for c in res.chunks:
+            lines.append(f'- {c["source"]}#{c["idx"]} (score={c["score"]:.4f})')
     else:
-        lines.append("\nSOURCES:\n(none)")
+        lines.append("SOURCES:\n(none)")
 
     if show_prompt:
-        lines.append("\nPROMPT:\n" + (report["prompt"] or ""))
+        lines.append("PROMPT:\n" + (res.prompt or ""))
+
+    if res.citations:
+        lines.append("CITIATIONS:")
+        for c in res.citations:
+            lines.append(f"- {c["source"]}#idx{c["idx"]}")
+    else:
+        lines.append("CITIATIONS:\nnone")
 
     return "\n".join(lines)
 
@@ -145,24 +164,13 @@ def main() -> None:
         top_k=args.top_k,
     )
 
-    context = rag_answer.build_context(hits, rag_cfg)
-
-    prompt = ""
-    answer: str | None = None
-
-    if not args.context_only:
-        prompt = rag_answer.build_prompt(args.q, context)
-        if args.llm == "mock":
-            answer = rag_answer.MockLLM().generate(prompt)
-        else:
-            answer = None
-
-    report = build_report(args.q, hits, context, prompt, answer)
+    res = rag_answer.rag_answer(args.q, hits, rag_cfg, llm=args.llm)
+    report = asdict(res)
 
     if args.format == "json":
         write_output(json.dumps(report, ensure_ascii=False, indent=2), args.out)
     else:
-        write_output(render_text(report, args.show_prompt, args.context_only), args.out)
+        write_output(render_text(res, args.show_prompt, args.context_only), args.out)
 
 
 if __name__ == "__main__":

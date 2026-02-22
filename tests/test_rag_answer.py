@@ -1,4 +1,11 @@
-from src.rag_answer import MockLLM, RAGConfig, build_context, build_prompt, g_base_prompt
+from src.rag_answer import (
+    MockLLM,
+    RAGConfig,
+    build_context,
+    build_prompt,
+    collect_citations,
+    g_base_prompt,
+)
 from src.rag_cli import get_hits_from_vector_index_search
 from src.vector_search import build_vector_index, search
 
@@ -86,3 +93,15 @@ def test_no_results():
     assert hits == []
     assert context == ""
     assert answer == "В контексте нет информации."
+
+
+def test_citiations():
+    hits = [
+        {"source": "a.txt", "idx": 0, "score": 1.0, "text": "..."},
+        {"source": "a.txt", "idx": 0, "score": 0.9, "text": "..."},
+        {"source": "b.txt", "idx": 2, "score": 0.8, "text": "..."},
+    ]
+
+    assert collect_citations(hits) == [{"source": "a.txt", "idx": 0}, {"source": "b.txt", "idx": 2}]
+    assert collect_citations(hits, max_items=1) == [{"source": "a.txt", "idx": 0}]
+    assert collect_citations([]) == []
