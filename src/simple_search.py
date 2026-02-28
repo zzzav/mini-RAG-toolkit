@@ -20,9 +20,15 @@ stop_words = {"the", "a", "an", "and", "or", "to", "in", "of"}
 
 def load_text_files(docs_dir: str) -> list[tuple[str, str]]:
     base = Path(docs_dir)
-    files = sorted(base.glob("*.txt"))
+    files = sorted(base.glob("*"))
     out: list[tuple[str, str]] = []
     for p in files:
+        if not p.is_file():
+            continue
+
+        if p.suffix.lower() not in {".txt", ".md"}:
+            continue
+
         out.append((p.name, p.read_text(encoding="utf-8", errors="replace")))
     return out
 

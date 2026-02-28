@@ -31,6 +31,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--use-synonyms", action="store_true")
     p.add_argument("--no-stop-words", action="store_true")
     p.add_argument("--inline-citations", action="store_true")
+    p.add_argument("--for-eval-jsonl-out", action="store_true")
     return p
 
 
@@ -74,7 +75,11 @@ def build_report(
 
 
 def render_text(
-    res: rag_answer.RAGResult, show_prompt: bool, context_only: bool, inline_citations: bool
+    res: rag_answer.RAGResult,
+    show_prompt: bool,
+    context_only: bool,
+    inline_citations: bool,
+    for_eval_jsonl_out: bool,
 ) -> str:
     # Текстовый режим: читабельно в консоли
     if context_only:
@@ -115,6 +120,14 @@ def render_text(
 
         lines.append(citations_line)
 
+    if for_eval_jsonl_out:
+        payload = {
+            "query": res.query,
+            "relevant": [{"source": c["source"], "idx": c["idx"]} for c in (res.citations or [])],
+        }
+        lines.append("Для тестов:")
+        lines.append(json.dumps(payload, ensure_ascii=False))
+
     return "\n".join(lines)
 
 
@@ -150,6 +163,7 @@ def main() -> None:
         if args.q:
             die("поисковой запрос q нельзя передавать вместе с docs")
 
+        print(args.docs)
         index = v_search.build_vector_index(
             args.docs, chunk_size=args.chunk_size, overlap=args.overlap
         )
@@ -185,7 +199,14 @@ def main() -> None:
         write_output(json.dumps(report, ensure_ascii=False, indent=2), args.out)
     else:
         write_output(
-            render_text(res, args.show_prompt, args.context_only, args.inline_citations), args.out
+            render_text(
+                res,
+                args.show_prompt,
+                args.context_only,
+                args.inline_citations,
+                args.for_eval_jsonl_out,
+            ),
+            args.out,
         )
 
 

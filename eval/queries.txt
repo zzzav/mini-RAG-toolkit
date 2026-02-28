@@ -1,0 +1,15 @@
+ошибка empty vocabulary sklearn
+почему падает empty vocabulary
+build_chunks load_docs expected 2 got 1
+распаковка (name, text) not enough values to unpack
+tmp_path фикстура pytest пример
+почему ./docs ломается при запуске из tests
+как сделать citations в rag answer
+как собрать prompt и context
+что такое MRR@k
+что такое Recall@k
+как сделать quality gate по retrieval
+как работает expand_tokens синонимы
+normalize_query стоп слова пунктуация
+vector_search stop_words english для русского
+как сделать check.ps1 для ruff black pytest

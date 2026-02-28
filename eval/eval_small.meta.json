@@ -1,0 +1,7 @@
+{
+  "chunk_size": 400,
+  "overlap": 80,
+  "index_type": "vector_tfidf",
+  "stop_words": true,
+  "synonyms": false
+}

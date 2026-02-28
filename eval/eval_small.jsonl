@@ -1,0 +1,8 @@
+{"query": "ошибка empty vocabulary sklearn", "relevant": [{"source": "day_06.md", "idx": 0}]}
+{"query": "как построить векторный индекс", "relevant": [{"source": "day_06.md", "idx": 1}]}
+{"query": "метрики поиска", "relevant": [{"source": "day_08.md", "idx": 0}]}
+{"query": "как собрать prompt и context", "relevant": [{"source": "day_10.md", "idx": 0}, {"source": "day_07.md", "idx": 0}, {"source": "day_07.md", "idx": 1}]}
+{"query": "как сделать quality gate по retrieval", "relevant": [{"source": "day_08.md", "idx": 1}]}
+{"query": "как сделать так, чтобы релевантный чанк иногда был не первым: что менять — запросы или корпус", "relevant": [{"source": "day_04.md", "idx": 2}]}
+{"query": "почему MRR может падать даже если Recall высокий (пример: релевант есть, но на 4-м месте)", "relevant": [{"source": "day_08.md", "idx": 0}, {"source": "day_08.md", "idx": 1}]}
+{"query": "как ExtractLLM решает 'нет информации': какой критерий нулевого скоринга и где он считается", "relevant": [{"source": "day_11.md", "idx": 0}, {"source": "day_11.md", "idx": 1}]}
