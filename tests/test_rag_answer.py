@@ -64,10 +64,16 @@ def test_mock_llm():
     assert request_1 == request_2
 
 
-def test_end_to_end():
+def test_end_to_end(tmp_path):
     cfg = RAGConfig()
     q = "invoice payment"
-    vector_index = build_vector_index("./docs", 400, 80)
+
+    docs = tmp_path / "docs"
+    docs.mkdir()
+    (docs / "a.txt").write_text("invoice payment due tomorrow", encoding="utf-8")
+    (docs / "b.txt").write_text("weather is nice", encoding="utf-8")
+
+    vector_index = build_vector_index(str(docs), 400, 80)
     results = search(q, vector_index, 2)
     hits = get_hits_from_vector_index_search(results)
     context = build_context(hits, cfg)
