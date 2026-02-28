@@ -79,10 +79,16 @@ def test_end_to_end():
     assert "invoice" in answer.lower()
 
 
-def test_no_results():
+def test_no_results(tmp_path):
     cfg = RAGConfig()
     q = ""
-    vector_index = build_vector_index("./docs", 400, 80)
+
+    docs = tmp_path / "docs"
+    docs.mkdir()
+    (docs / "a.txt").write_text("invoice payment due tomorrow", encoding="utf-8")
+    (docs / "b.txt").write_text("weather is nice", encoding="utf-8")
+
+    vector_index = build_vector_index(str(docs), 400, 80)
     results = search(q, vector_index, 2)
     hits = get_hits_from_vector_index_search(results)
     context = build_context(hits, cfg)
@@ -95,7 +101,7 @@ def test_no_results():
     assert answer == "В контексте нет информации."
 
 
-def test_citiations():
+def test_citations():
     hits = [
         {"source": "a.txt", "idx": 0, "score": 1.0, "text": "..."},
         {"source": "a.txt", "idx": 0, "score": 0.9, "text": "..."},
