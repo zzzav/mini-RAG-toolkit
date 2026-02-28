@@ -1,5 +1,8 @@
+import re
 from dataclasses import dataclass
 from typing import Literal
+
+from src.query_normalize import DEFAULT_STOP_WORDS, normalize_query
 
 g_base_prompt: str = """
 SYSTEM:
@@ -16,6 +19,8 @@ CONTEXT:
 - Коротко и по делу (3–8 предложений).
 - Если есть численные данные/сроки/факты — приведи их.
 - Если ответа нет в контексте — явно так и напиши."""
+
+ALLOWED_LLM = ["mock", "extract", "none"]
 
 
 @dataclass
@@ -87,12 +92,24 @@ def rag_answer(
     hits: list[dict],
     cfg: RAGConfig,
     *,
-    llm: Literal["mock", "none"] = "mock",
+    llm: Literal["mock", "extract", "none"] = "mock",
 ) -> RAGResult:
 
     context = build_context(hits, cfg)
-    prompt = "" if llm == "none" else build_prompt(question, context)
-    answer = None if llm == "none" else MockLLM().generate(prompt)
+
+    if llm not in ALLOWED_LLM:
+        raise ValueError("Недопоустимое значение llm")
+
+    if llm == "none":
+        prompt = ""
+        answer = None
+    elif llm == "mock":
+        prompt = build_prompt(question, context)
+        answer = MockLLM().generate(prompt)
+    elif llm == "extract":
+        prompt = build_prompt(question, context)
+        answer = ExtractLLM().generate(prompt)
+
     citations = collect_citations(hits, max_items=cfg.top_k)
     chunks = [
         {
@@ -147,3 +164,57 @@ class MockLLM:
             answer = "Ответ:" + context[:200]
 
         return answer
+
+
+@dataclass
+class ExtractLLM:
+    def generate(self, prompt: str) -> str:
+        no_context_str = "В контексте нет информации."
+        if prompt == "":
+            return no_context_str
+
+        # обрабатываем запрос
+        start_str = "Вопрос: "
+        end_str = "\nCONTEXT:"
+        q: str = ""
+
+        if start_str in prompt:
+            q = prompt.split(start_str, 1)[1].split(end_str, 1)[0]
+
+        if q == "":
+            return "Отсутсвует запрос."
+
+        q_normalized = normalize_query(q, stop_words=DEFAULT_STOP_WORDS)
+
+        # обрабатываем контекст - делим на предложения
+        start_str = "CONTEXT:\n"
+        end_str = "\nТребования к ответу:"
+        context: str = ""
+
+        if start_str in prompt:
+            context = prompt.split(start_str, 1)[1].split(end_str, 1)[0]
+
+        context_lines = [line.strip() for line in re.split(r"[.?!\n]+", context) if line.strip()]
+
+        scored_context_lines: list[tuple[int, int, str]] = []
+        seen_lines: set[str] = set()
+        score_sum: int = 0
+        for pos, line in enumerate(context_lines):
+
+            line_key = " ".join(normalize_query(line, stop_words=DEFAULT_STOP_WORDS))
+            if line_key in seen_lines:
+                continue
+            seen_lines.add(line_key)
+
+            line_tokens = set(normalize_query(line, stop_words=DEFAULT_STOP_WORDS))
+            line_score = sum(1 for w in q_normalized if w in line_tokens)
+            score_sum += line_score
+
+            scored_context_lines.append((line_score, pos, line))
+
+        if score_sum == 0:
+            return no_context_str
+
+        scored_context_lines.sort(key=lambda x: (-x[0], x[1]))
+
+        return " ".join(line for _, _, line in scored_context_lines[:3])

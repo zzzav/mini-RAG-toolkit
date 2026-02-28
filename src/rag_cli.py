@@ -11,7 +11,7 @@ import src.vector_search as v_search
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="RAG CLI")
-    p.add_argument("--llm", type=str, default="mock", choices=["mock", "none"])
+    p.add_argument("--llm", type=str, default="mock", choices=rag_answer.ALLOWED_LLM)
     p.add_argument("--q", type=str)
     p.add_argument("--index", dest="index_in", type=str, default=None)
     p.add_argument("--index-out", dest="index_out", default=None)
@@ -30,6 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--docs", type=str)
     p.add_argument("--use-synonyms", action="store_true")
     p.add_argument("--no-stop-words", action="store_true")
+    p.add_argument("--inline-citations", action="store_true")
     return p
 
 
@@ -60,7 +61,7 @@ def build_report(
     context: str,
     prompt: str,
     answer: str | None,
-    citiations: list[dict],
+    citations: list[dict],
 ) -> dict:
     return {
         "query": query,
@@ -68,11 +69,13 @@ def build_report(
         "context": context,
         "prompt": prompt,
         "answer": answer,
-        "citiations": citiations,
+        "citations": citations,
     }
 
 
-def render_text(res: rag_answer.RAGResult, show_prompt: bool, context_only: bool) -> str:
+def render_text(
+    res: rag_answer.RAGResult, show_prompt: bool, context_only: bool, inline_citations: bool
+) -> str:
     # Текстовый режим: читабельно в консоли
     if context_only:
         return "CONTEXT:\n" + (res.context or "")
@@ -95,11 +98,22 @@ def render_text(res: rag_answer.RAGResult, show_prompt: bool, context_only: bool
         lines.append("PROMPT:\n" + (res.prompt or ""))
 
     if res.citations:
-        lines.append("CITIATIONS:")
+        lines.append("CITATIONS:")
         for c in res.citations:
-            lines.append(f"- {c["source"]}#idx{c["idx"]}")
+            lines.append(f'- {c["source"]}#{c["idx"]}')
     else:
-        lines.append("CITIATIONS:\nnone")
+        lines.append("CITATIONS:\nnone")
+
+    if inline_citations:
+        citations_line: str = "Источники: "
+        if res.citations:
+            for i, c in enumerate(res.citations):
+                citations_line += ", " if i > 0 else ""
+                citations_line += f'{c["source"]}#{c["idx"]}'
+        else:
+            citations_line += "нет данных"
+
+        lines.append(citations_line)
 
     return "\n".join(lines)
 
@@ -170,7 +184,9 @@ def main() -> None:
     if args.format == "json":
         write_output(json.dumps(report, ensure_ascii=False, indent=2), args.out)
     else:
-        write_output(render_text(res, args.show_prompt, args.context_only), args.out)
+        write_output(
+            render_text(res, args.show_prompt, args.context_only, args.inline_citations), args.out
+        )
 
 
 if __name__ == "__main__":
