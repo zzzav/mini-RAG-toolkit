@@ -2,7 +2,7 @@
 $ErrorActionPreference = "Stop"
 
 Write-Host "== ruff =="
-python -m ruff check .
+python -m ruff check --fix .
 
 Write-Host "== black (check) =="
 python -m black --check .

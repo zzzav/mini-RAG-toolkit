@@ -2,6 +2,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+import src.bm25_search as bm25_search
 import src.vector_search as v_search
 
 
@@ -26,7 +27,7 @@ def create_json_from_eval_report(eval_rep: EvalReport) -> dict:
         "n": eval_rep.n,
         "recall_mean": eval_rep.recall_mean,
         "mrr_mean": eval_rep.mrr_mean,
-        "par_case": eval_rep.per_case,
+        "per_case": eval_rep.per_case,
     }
 
 
@@ -93,13 +94,24 @@ def mrr_at_k(
     return 0.0
 
 
-def evaluate(index: v_search.VectorIndex, cases: list[EvalCase], k: int) -> EvalReport:
+def evaluate(
+    index: v_search.VectorIndex | bm25_search.BM25Index,
+    cases: list[EvalCase],
+    k: int,
+    *,
+    retriever: str = "vector",
+) -> EvalReport:
     recall_list: list[float] = []
     mrr_list: list[float] = []
     per_case_list: list[dict] = []
 
     for case in cases:
-        hits = v_search.search(case.query, index, top_k=k)
+        hits = []
+
+        if retriever == "bm25":
+            hits = bm25_search.bm25_search(case.query, index, top_k=k)
+        elif retriever == "vector":
+            hits = v_search.search(case.query, index, top_k=k)
 
         r = recall_at_k(hits, case.relevant, k)
         m = mrr_at_k(hits, case.relevant, k)

@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 from typing import NoReturn
 
+import src.bm25_search as bm25_search
 import src.eval_retrieval as eval_retrieval
 import src.vector_search as v_search
 
@@ -24,6 +25,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--k", type=int, default=5)
     p.add_argument("--format", type=str, default="text", choices=g_formats_arr)
     p.add_argument("--out", type=str, default=None)
+    p.add_argument("--retriever", type=str, default="vector", choices=["vector", "bm25"])
     return p
 
 
@@ -45,6 +47,8 @@ def main() -> None:
         die("не задан путь к index")
     if not args.dataset_path:
         die("не задан путь к файлу с данными")
+    if not args.retriever:
+        die("не задан тип поиска")
 
     dataset_path = Path(args.dataset_path)
     if not dataset_path.exists():
@@ -58,9 +62,14 @@ def main() -> None:
     if not index_path.is_file():
         die(f"index должен быть файлом: {args.index_in}")
 
-    index = v_search.load_index(args.index_in)
+    index = None
+    if args.retriever == "bm25":
+        index = bm25_search.load_bm25(args.index_in)
+    else:
+        index = v_search.load_index(args.index_in)
+
     cases = eval_retrieval.load_eval_cases(dataset_path)
-    eval_rep = eval_retrieval.evaluate(index, cases, args.k)
+    eval_rep = eval_retrieval.evaluate(index, cases, args.k, args.retriever)
 
     if args.format == "json":
         write_output(

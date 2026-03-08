@@ -5,6 +5,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import NoReturn
 
+import src.bm25_search as bm25_search
 import src.rag_answer as rag_answer
 import src.vector_search as v_search
 
@@ -32,6 +33,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-stop-words", action="store_true")
     p.add_argument("--inline-citations", action="store_true")
     p.add_argument("--for-eval-jsonl-out", action="store_true")
+
+    p.add_argument("--retriever", type=str, default="vector", choices=["vector", "bm25"])
+    p.add_argument("--index-type", type=str, default="vector", choices=["vector", "bm25"])
     return p
 
 
@@ -162,12 +166,25 @@ def main() -> None:
             die("index нельзя передавать вместе с docs")
         if args.q:
             die("поисковой запрос q нельзя передавать вместе с docs")
+        if not args.index_type:
+            die("не указан тип индекса для сохранения")
 
         print(args.docs)
-        index = v_search.build_vector_index(
-            args.docs, chunk_size=args.chunk_size, overlap=args.overlap
-        )
-        v_search.save_index(args.index_out, index)
+
+        if args.index_type == "bm25":
+            index = bm25_search.build_bm25_index(
+                args.docs,
+                chunk_size=args.chunk_size,
+                overlap=args.overlap,
+                use_stop_words=not args.no_stop_words,
+            )
+            bm25_search.save_bm25(args.index_out, index)
+        else:
+            index = v_search.build_vector_index(
+                args.docs, chunk_size=args.chunk_size, overlap=args.overlap
+            )
+            v_search.save_index(args.index_out, index)
+
         return
 
     # режим поиска
@@ -175,15 +192,27 @@ def main() -> None:
         die("не задан путь к index")
     if not args.q:
         die("не задан поисковой запрос q")
+    if not args.retriever:
+        die("не задан тип поиска")
 
-    index = v_search.load_index(args.index_in)
-    results = v_search.search(
-        args.q,
-        index,
-        top_k=args.top_k,
-        use_synonyms=args.use_synonyms,
-        use_stop_words=not args.no_stop_words,
-    )
+    index = None
+    results = None
+
+    if args.retriever == "bm25":
+        index = bm25_search.load_bm25(args.index_in)
+        results = bm25_search.bm25_search(
+            args.q, index, top_k=args.top_k, use_synonyms=args.use_synonyms
+        )
+    else:
+        index = v_search.load_index(args.index_in)
+        results = v_search.search(
+            args.q,
+            index,
+            top_k=args.top_k,
+            use_synonyms=args.use_synonyms,
+            use_stop_words=not args.no_stop_words,
+        )
+
     hits = get_hits_from_vector_index_search(results)
 
     rag_cfg = rag_answer.RAGConfig(

@@ -217,4 +217,4 @@ class ExtractLLM:
 
         scored_context_lines.sort(key=lambda x: (-x[0], x[1]))
 
-        return " ".join(line for _, _, line in scored_context_lines[:3])
+        return ". ".join(line for _, _, line in scored_context_lines[:3])
