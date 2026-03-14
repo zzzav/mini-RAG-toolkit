@@ -32,7 +32,7 @@ def test_no_relevant():
 
 
 def test_evaluate(tmp_path):
-    vector_path = tmp_path / "pytest.pk1"
+    vector_path = tmp_path / "pytest.pkl"
     eval_path = tmp_path / "eval.jsonl"
     docs = [
         (

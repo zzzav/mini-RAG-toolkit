@@ -4,6 +4,7 @@ from pathlib import Path
 
 import src.bm25_search as bm25_search
 import src.vector_search as v_search
+from src.rerank import rerank_hits
 
 
 @dataclass
@@ -100,18 +101,32 @@ def evaluate(
     k: int,
     *,
     retriever: str = "vector",
+    rerank: bool = False,
+    rerank_top_n: int = 10,
+    proximity_window: int = 5,
 ) -> EvalReport:
     recall_list: list[float] = []
     mrr_list: list[float] = []
     per_case_list: list[dict] = []
 
+    initial_top_k = rerank_top_n if rerank else k
+
     for case in cases:
         hits = []
 
         if retriever == "bm25":
-            hits = bm25_search.bm25_search(case.query, index, top_k=k)
+            hits = bm25_search.bm25_search(case.query, index, top_k=initial_top_k)
         elif retriever == "vector":
-            hits = v_search.search(case.query, index, top_k=k)
+            hits = v_search.search(case.query, index, top_k=initial_top_k)
+
+        if rerank:
+            hits = rerank_hits(
+                case.query,
+                hits,
+                top_k=k,
+                use_stop_words=True,
+                proximity_window=proximity_window,
+            )
 
         r = recall_at_k(hits, case.relevant, k)
         m = mrr_at_k(hits, case.relevant, k)

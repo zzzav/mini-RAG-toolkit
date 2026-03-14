@@ -8,6 +8,7 @@ from typing import NoReturn
 import src.bm25_search as bm25_search
 import src.rag_answer as rag_answer
 import src.vector_search as v_search
+from src.rerank import rerank_hits
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -36,6 +37,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     p.add_argument("--retriever", type=str, default="vector", choices=["vector", "bm25"])
     p.add_argument("--index-type", type=str, default="vector", choices=["vector", "bm25"])
+
+    p.add_argument("--rerank", action="store_true")
+    p.add_argument("--rerank-top-n", type=int, default=10)
+    p.add_argument("--proximity-window", type=int, default=5)
     return p
 
 
@@ -194,23 +199,39 @@ def main() -> None:
         die("не задан поисковой запрос q")
     if not args.retriever:
         die("не задан тип поиска")
+    if args.rerank:
+        if not args.rerank_top_n or args.rerank_top_n < 1:
+            die("включен режим реранкинга, но не задан rerank-top-n")
+        if not args.proximity_window or args.proximity_window < 1:
+            die("включен режим реранкинга, но не задан proximity-window")
 
     index = None
     results = None
+    initial_top_k = args.rerank_top_n if args.rerank else args.top_k
 
     if args.retriever == "bm25":
         index = bm25_search.load_bm25(args.index_in)
         results = bm25_search.bm25_search(
-            args.q, index, top_k=args.top_k, use_synonyms=args.use_synonyms
+            args.q, index, top_k=initial_top_k, use_synonyms=args.use_synonyms
         )
     else:
         index = v_search.load_index(args.index_in)
         results = v_search.search(
             args.q,
             index,
-            top_k=args.top_k,
+            top_k=initial_top_k,
             use_synonyms=args.use_synonyms,
             use_stop_words=not args.no_stop_words,
+        )
+
+    # режим реранкинга результатов
+    if args.rerank:
+        results = rerank_hits(
+            args.q,
+            results,
+            top_k=args.top_k,
+            use_stop_words=not args.no_stop_words,
+            proximity_window=args.proximity_window,
         )
 
     hits = get_hits_from_vector_index_search(results)

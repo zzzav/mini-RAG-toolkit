@@ -18,13 +18,25 @@ def run_regression(
     min_recall: float,
     min_mrr: float,
     for_test: bool = False,
+    retriever: str = "vector",
+    rerank: bool = False,
+    rerank_top_n: int = 10,
+    proximity_window: int = 5,
     out_format: str = "text",
     out: str | None = None,
 ) -> int:
 
     index = v_search.load_index(index_path)
     cases = eval_retrieval.load_eval_cases(dataset_path)
-    report = eval_retrieval.evaluate(index, cases, k)
+    report = eval_retrieval.evaluate(
+        index,
+        cases,
+        k,
+        retriever=retriever,
+        rerank=rerank,
+        rerank_top_n=rerank_top_n,
+        proximity_window=proximity_window,
+    )
 
     if report.recall_mean < min_recall or report.mrr_mean < min_mrr:
         return 2
@@ -65,6 +77,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--min-mrr", type=float, required=True)
     p.add_argument("--format", type=str, default="text", choices=g_formats_arr)
     p.add_argument("--out", type=str, default=None)
+
+    p.add_argument("--retriever", type=str, default="vector", choices=["vector", "bm25"])
+
+    p.add_argument("--rerank", action="store_true")
+    p.add_argument("--rerank-top-n", type=int, default=10)
+    p.add_argument("--proximity-window", type=int, default=5)
+
     return p
 
 
@@ -99,6 +118,15 @@ def main() -> None:
     if not index_path.is_file():
         die(f"index должен быть файлом: {args.index_in}")
 
+    if not args.retriever:
+        die("не задан тип поиска")
+
+    if args.rerank:
+        if not args.rerank_top_n or args.rerank_top_n < 1:
+            die("включен режим реранкинга, но не задан rerank-top-n")
+        if not args.proximity_window or args.proximity_window < 1:
+            die("включен режим реранкинга, но не задан proximity-window")
+
     if (
         run_regression(
             index_path=args.index_in,
@@ -106,6 +134,10 @@ def main() -> None:
             k=args.k,
             min_recall=args.min_recall,
             min_mrr=args.min_mrr,
+            retriever=args.retriever,
+            rerank=args.rerank,
+            rerank_top_n=args.rerank_top_n,
+            proximity_window=args.proximity_window,
             out_format=args.format,
             out=args.out,
         )

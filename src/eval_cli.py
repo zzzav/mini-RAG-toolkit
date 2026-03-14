@@ -26,6 +26,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--format", type=str, default="text", choices=g_formats_arr)
     p.add_argument("--out", type=str, default=None)
     p.add_argument("--retriever", type=str, default="vector", choices=["vector", "bm25"])
+
+    p.add_argument("--rerank", action="store_true")
+    p.add_argument("--rerank-top-n", type=int, default=10)
+    p.add_argument("--proximity-window", type=int, default=5)
     return p
 
 
@@ -62,6 +66,12 @@ def main() -> None:
     if not index_path.is_file():
         die(f"index должен быть файлом: {args.index_in}")
 
+    if args.rerank:
+        if not args.rerank_top_n or args.rerank_top_n < 1:
+            die("включен режим реранкинга, но не задан rerank-top-n")
+        if not args.proximity_window or args.proximity_window < 1:
+            die("включен режим реранкинга, но не задан proximity-window")
+
     index = None
     if args.retriever == "bm25":
         index = bm25_search.load_bm25(args.index_in)
@@ -69,7 +79,15 @@ def main() -> None:
         index = v_search.load_index(args.index_in)
 
     cases = eval_retrieval.load_eval_cases(dataset_path)
-    eval_rep = eval_retrieval.evaluate(index, cases, args.k, args.retriever)
+    eval_rep = eval_retrieval.evaluate(
+        index,
+        cases,
+        args.k,
+        retriever=args.retriever,
+        rerank=args.rerank,
+        rerank_top_n=args.rerank_top_n,
+        proximity_window=args.proximity_window,
+    )
 
     if args.format == "json":
         write_output(

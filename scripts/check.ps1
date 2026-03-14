@@ -12,10 +12,14 @@ python -m pytest -q
 
 Write-Host "== retrieval regression gate =="
 python -m src.regress_cli `
-  --index .\eval\vindex_v1_rus.pkl `
+  --index .\eval\bm25_index_v1_rus.pkl `
   --dataset .\eval\eval_small.jsonl `
+  --retriever bm25 `
+  --rerank `
+  --rerank-top-n 10 `
+  --proximity-window 5 `
   --k 5 `
-  --min-recall 0.70 `
-  --min-mrr 0.45
+  --min-recall 0.7 `
+  --min-mrr 0.5
 
 Write-Host "OK"

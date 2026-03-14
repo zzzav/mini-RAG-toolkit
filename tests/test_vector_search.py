@@ -8,7 +8,7 @@ from src.vector_search import (
 
 
 def test_top_1(tmp_path):
-    vector_path = tmp_path / "pytest.pk1"
+    vector_path = tmp_path / "pytest.pkl"
     docs = [
         (
             "a.txt",
