@@ -4,23 +4,27 @@ from typing import Literal
 
 from src.query_normalize import DEFAULT_STOP_WORDS, normalize_query
 
-g_base_prompt: str = """
+NO_INFO_IN_CONTEXT = "В контексте нет информации."
+
+g_base_prompt: str = f"""
 SYSTEM:
 Ты помощник. Отвечай только на основе CONTEXT. Если в CONTEXT нет ответа — скажи:
-"В контексте нет информации."
+"{NO_INFO_IN_CONTEXT}"
 
 USER:
-Вопрос: {question}
+Вопрос: {{question}}
 
 CONTEXT:
-{context}
+{{context}}
 
 Требования к ответу:
 - Коротко и по делу (3–8 предложений).
 - Если есть численные данные/сроки/факты — приведи их.
 - Если ответа нет в контексте — явно так и напиши."""
 
-ALLOWED_LLM = ["mock", "extract", "none"]
+ALLOWED_LLM = {"mock", "extract", "none"}
+
+RETRIEVER_TYPES = {"vector", "bm25"}
 
 
 @dataclass
@@ -87,14 +91,31 @@ def build_prompt(question: str, context: str) -> str:
     return prompt
 
 
+def get_hits_from_vector_index_search(
+    search_results: list[tuple[float, Chunk]],
+) -> list[dict]:
+    hits: list[dict] = []
+    for score, chunk in search_results:
+        hits.append(
+            {
+                "source": chunk.source,
+                "idx": int(chunk.idx),
+                "score": float(score),
+                "text": chunk.text,
+            }
+        )
+    return hits
+
+
 def rag_answer(
     question: str,
-    hits: list[dict],
+    results: list[tuple[float, Chunk]],
     cfg: RAGConfig,
     *,
     llm: Literal["mock", "extract", "none"] = "mock",
 ) -> RAGResult:
 
+    hits = get_hits_from_vector_index_search(results)
     context = build_context(hits, cfg)
 
     if llm not in ALLOWED_LLM:
@@ -159,7 +180,7 @@ class MockLLM:
 
         answer = ""
         if context.strip() == "":
-            answer = "В контексте нет информации."
+            answer = NO_INFO_IN_CONTEXT
         else:
             answer = "Ответ:" + context[:200]
 
@@ -169,7 +190,7 @@ class MockLLM:
 @dataclass
 class ExtractLLM:
     def generate(self, prompt: str) -> str:
-        no_context_str = "В контексте нет информации."
+        no_context_str = NO_INFO_IN_CONTEXT
         if prompt == "":
             return no_context_str
 

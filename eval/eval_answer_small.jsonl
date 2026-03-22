@@ -1,0 +1,10 @@
+{"query":"Что подключили в День 1 для тестирования, форматирования и линтинга?","expected_contains":["pytest","black","ruff"],"expected_mode":"answer"}
+{"query":"Какие источники ввода поддерживает text_tool из Дня 2?","expected_contains":["--text","--in"],"expected_mode":"answer"}
+{"query":"Какой флаг в День 2 выводит только статистику?","expected_contains":["--stats-only"],"expected_mode":"answer"}
+{"query":"Как в День 3 фильтровали письма по домену?","expected_contains":["endswith(\"@domain\")"],"expected_mode":"answer"}
+{"query":"Какая сортировка используется в mail_report из Дня 3?","expected_contains":["(-count, from)"],"expected_mode":"answer"}
+{"query":"Что делает simple_search в День 4 с документами перед поиском?","expected_contains":["разбиение на чанки","chunk_text"],"expected_mode":"answer"}
+{"query":"Какие метрики retrieval добавили в День 8?","expected_contains":["Recall@k","MRR@k"],"expected_mode":"answer"}
+{"query":"Какая фраза возвращается в День 11, если контекст пустой или совпадений нет?","expected_contains":["В контексте нет информации."],"expected_mode":"answer"}
+{"query":"Какую внешнюю модель OpenAI подключили в День 7?","expected_contains":[],"expected_mode":"no_info"}
+{"query":"На каком порту поднимали FastAPI сервер в этих учебных днях?","expected_contains":[],"expected_mode":"no_info"}

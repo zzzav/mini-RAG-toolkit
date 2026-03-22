@@ -18,7 +18,6 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--index", dest="index_in", type=str, default=None)
     p.add_argument("--index-out", dest="index_out", default=None)
 
-    # ВАЖНО: format больше не путь
     p.add_argument("--format", type=str, default="text", choices=["text", "json"])
     p.add_argument("--out", type=str, default=None)
 

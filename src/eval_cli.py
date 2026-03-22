@@ -8,7 +8,7 @@ import src.bm25_search as bm25_search
 import src.eval_retrieval as eval_retrieval
 import src.vector_search as v_search
 
-g_formats_arr = ["text", "json"]
+g_formats_arr = {"text", "json"}
 
 
 def write_output(text: str, out_path: str | None) -> None:
