@@ -25,7 +25,7 @@ def test_regression_pass(tmp_path: Path):
     )
 
     code = run_regression(
-        index_path=str(index_path),
+        index_vector_path=str(index_path),
         dataset_path=str(dataset_path),
         k=3,
         min_recall=0.5,
@@ -55,7 +55,7 @@ def test_regression_fail(tmp_path: Path):
     )
 
     code = run_regression(
-        index_path=str(index_path),
+        index_vector_path=str(index_path),
         dataset_path=str(dataset_path),
         k=3,
         min_recall=1.1,

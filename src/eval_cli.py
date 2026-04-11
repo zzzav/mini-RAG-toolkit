@@ -6,6 +6,8 @@ from typing import NoReturn
 
 import src.bm25_search as bm25_search
 import src.eval_retrieval as eval_retrieval
+import src.fusion_search as fusion_search
+import src.rag_answer as rag_answer
 import src.vector_search as v_search
 
 g_formats_arr = {"text", "json"}
@@ -20,12 +22,16 @@ def write_output(text: str, out_path: str | None) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Eval CLI")
-    p.add_argument("--index", dest="index_in", type=str, required=True)
+    p.add_argument("--index-vector", dest="index_vector", type=str)
+    p.add_argument("--index-bm25", dest="index_bm25", type=str)
     p.add_argument("--dataset", dest="dataset_path", type=str, required=True)
     p.add_argument("--k", type=int, default=5)
     p.add_argument("--format", type=str, default="text", choices=g_formats_arr)
     p.add_argument("--out", type=str, default=None)
-    p.add_argument("--retriever", type=str, default="vector", choices=["vector", "bm25"])
+    p.add_argument("--retriever", type=str, default="vector", choices=rag_answer.RETRIEVER_TYPES)
+
+    p.add_argument("--fusion-method", type=str, default="rrf", choices=fusion_search.FUSION_METHODS)
+    p.add_argument("--fusion-top-n", type=int, default=5)
 
     p.add_argument("--rerank", action="store_true")
     p.add_argument("--rerank-top-n", type=int, default=10)
@@ -47,8 +53,10 @@ def main() -> None:
         die("k должен целочисленным")
     if args.k < 1:
         die("k должен быть >= 1")
-    if not args.index_in:
-        die("не задан путь к index")
+    if (args.retriever == "vector" or args.retriever == "fusion") and not args.index_vector:
+        die("не задан путь к index-vector")
+    if (args.retriever == "bm25" or args.retriever == "fusion") and not args.index_bm25:
+        die("не задан путь к index-bm25")
     if not args.dataset_path:
         die("не задан путь к файлу с данными")
     if not args.retriever:
@@ -60,11 +68,21 @@ def main() -> None:
     if not dataset_path.is_file():
         die(f"dataset должен быть файлом: {args.dataset_path}")
 
-    index_path = Path(args.index_in)
-    if not index_path.exists():
-        die(f"index не найден: {args.index_in}")
-    if not index_path.is_file():
-        die(f"index должен быть файлом: {args.index_in}")
+    if args.retriever == "fusion":
+        if not args.fusion_method:
+            die("включен режим смешивания, но не задан тип fusion-method")
+        if not args.fusion_top_n or args.fusion_top_n < 1:
+            die("включен режим смешивания, но не задан fusion-top-n")
+
+    def check_index_path(path: str, retriever: str):
+        index_path = Path(path)
+        if not index_path.exists():
+            die(f"index-{retriever} не найден: {path}")
+
+    if args.retriever == "vector" or args.retriever == "fusion":
+        check_index_path(args.index_vector, "vector")
+    if args.retriever == "bm25" or args.retriever == "fusion":
+        check_index_path(args.index_bm25, "bm25")
 
     if args.rerank:
         if not args.rerank_top_n or args.rerank_top_n < 1:
@@ -72,21 +90,25 @@ def main() -> None:
         if not args.proximity_window or args.proximity_window < 1:
             die("включен режим реранкинга, но не задан proximity-window")
 
-    index = None
-    if args.retriever == "bm25":
-        index = bm25_search.load_bm25(args.index_in)
-    else:
-        index = v_search.load_index(args.index_in)
+    index_bm25 = None
+    index_vector = None
+    if args.retriever == "bm25" or args.retriever == "fusion":
+        index_bm25 = bm25_search.load_bm25(args.index_bm25)
+    if args.retriever == "vector" or args.retriever == "fusion":
+        index_vector = v_search.load_index(args.index_vector)
 
     cases = eval_retrieval.load_eval_cases(dataset_path)
     eval_rep = eval_retrieval.evaluate(
-        index,
         cases,
         args.k,
+        index_vector=index_vector,
+        index_bm25=index_bm25,
         retriever=args.retriever,
         rerank=args.rerank,
         rerank_top_n=args.rerank_top_n,
         proximity_window=args.proximity_window,
+        fusion_top_n=args.fusion_top_n if args.retriever == "fusion" else 0,
+        fusion_method=args.fusion_method if args.retriever == "fusion" else None,
     )
 
     if args.format == "json":

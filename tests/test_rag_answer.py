@@ -5,8 +5,8 @@ from src.rag_answer import (
     build_prompt,
     collect_citations,
     g_base_prompt,
+    get_hits_from_vector_index_search,
 )
-from src.rag_cli import get_hits_from_vector_index_search
 from src.vector_search import build_vector_index, search
 
 

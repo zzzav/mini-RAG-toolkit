@@ -80,7 +80,7 @@ def test_evaluate(tmp_path):
     save_index(vector_path, index)
     index_loaded = load_index(vector_path)
 
-    eval_rep = eval_retrieval.evaluate(index_loaded, cases, 3)
+    eval_rep = eval_retrieval.evaluate(cases, 3, index_vector=index_loaded)
 
     assert eval_rep.n == 4
     assert eval_rep.recall_mean < 1.0 and eval_rep.recall_mean >= 0.0

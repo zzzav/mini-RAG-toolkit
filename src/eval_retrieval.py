@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import src.bm25_search as bm25_search
+import src.fusion_search as fusion_search
 import src.vector_search as v_search
 from src.rerank import rerank_hits
 
@@ -96,14 +97,17 @@ def mrr_at_k(
 
 
 def evaluate(
-    index: v_search.VectorIndex | bm25_search.BM25Index,
     cases: list[EvalCase],
     k: int,
     *,
+    index_vector=None,
+    index_bm25=None,
     retriever: str = "vector",
     rerank: bool = False,
     rerank_top_n: int = 10,
     proximity_window: int = 5,
+    fusion_top_n: int = 5,
+    fusion_method: str | None = None,
 ) -> EvalReport:
     recall_list: list[float] = []
     mrr_list: list[float] = []
@@ -115,9 +119,17 @@ def evaluate(
         hits = []
 
         if retriever == "bm25":
-            hits = bm25_search.bm25_search(case.query, index, top_k=initial_top_k)
+            hits = bm25_search.bm25_search(case.query, index_bm25, top_k=initial_top_k)
         elif retriever == "vector":
-            hits = v_search.search(case.query, index, top_k=initial_top_k)
+            hits = v_search.search(case.query, index_vector, top_k=initial_top_k)
+        elif retriever == "fusion":
+            hits_bm25 = bm25_search.bm25_search(case.query, index_bm25, top_k=fusion_top_n)
+            hits_vector = v_search.search(case.query, index_vector, top_k=fusion_top_n)
+
+            if fusion_method == "rrf":
+                hits = fusion_search.rrf_fusion(hits_vector, hits_bm25, [])
+            elif fusion_method == "weighted":
+                hits = fusion_search.weighted_score_fusion(hits_vector, hits_bm25, [])
 
         if rerank:
             hits = rerank_hits(

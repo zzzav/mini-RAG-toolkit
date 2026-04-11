@@ -23,8 +23,8 @@ CONTEXT:
 - Если ответа нет в контексте — явно так и напиши."""
 
 ALLOWED_LLM = {"mock", "extract", "none"}
-
-RETRIEVER_TYPES = {"vector", "bm25"}
+RETRIEVER_TYPES = {"vector", "bm25", "fusion"}
+INDEX_TYPES = {"vector", "bm25"}
 
 
 @dataclass

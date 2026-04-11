@@ -12,9 +12,10 @@ python -m pytest -q
 
 Write-Host "== retrieval regression gate =="
 python -m src.regress_cli `
-  --index .\eval\bm25_index_v1_rus.pkl `
+  --index-bm25 .\eval\bm25_index_v1_rus.pkl `
+  --index-vector .\eval\vindex_v1_rus.pkl `
   --dataset .\eval\eval_small.jsonl `
-  --retriever bm25 `
+  --retriever fusion `
   --rerank `
   --rerank-top-n 10 `
   --proximity-window 5 `
