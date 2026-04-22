@@ -1,0 +1,14 @@
+{"query": "первый урок готового ИИ-агента в мультиагентной системе", "relevant": [{"source": "closed_tg_lesson_1.txt", "idx": 0}]}
+{"query": "урок про путь настоящего автоматизатора и первую ячейку будущей системы", "relevant": [{"source": "closed_tg_lesson_1.txt", "idx": 0}]}
+{"query": "второй урок первый важный слой логики определяет тип входящего сообщения", "relevant": [{"source": "closed_tg_lesson_2.txt", "idx": 0}]}
+{"query": "урок где бот сначала определяет тип сообщения и только потом выбирает что делать дальше", "relevant": [{"source": "closed_tg_lesson_2.txt", "idx": 0}]}
+{"query": "третий урок внешний пользовательский слой системы", "relevant": [{"source": "closed_tg_lesson_3.txt", "idx": 0}]}
+{"query": "урок про Google Sheets как внешний слой данных и таблицу задач", "relevant": [{"source": "closed_tg_lesson_3.txt", "idx": 0}]}
+{"query": "четвертый урок внутренний системный слой и постановка внутренней задачи в шину", "relevant": [{"source": "closed_tg_lesson_4.txt", "idx": 0}]}
+{"query": "урок про agents task_types agent_tasks и внутреннюю задачу в шине", "relevant": [{"source": "closed_tg_lesson_4.txt", "idx": 0}]}
+{"query": "пятый урок краткосрочная память и активный контекст пользователя", "relevant": [{"source": "closed_tg_lesson_5.txt", "idx": 0}]}
+{"query": "урок про Redis как слой памяти процесса и один живой контекст на пользователя", "relevant": [{"source": "closed_tg_lesson_5.txt", "idx": 0}]}
+{"query": "шестой урок AI начинает понимать и разбирать накопленный контекст", "relevant": [{"source": "closed_tg_lesson_6.txt", "idx": 0}]}
+{"query": "урок про структурированный список задач из накопленного контекста и транскрибацию голоса", "relevant": [{"source": "closed_tg_lesson_6.txt", "idx": 0}]}
+{"query": "седьмой урок отдельный workflow агента и первая мультиагентная ИИ-система", "relevant": [{"source": "closed_tg_lesson_7.txt", "idx": 0}]}
+{"query": "урок где ИИ-разбор становится отдельной ролью внутри системы и добавляется TTL workflow", "relevant": [{"source": "closed_tg_lesson_7.txt", "idx": 0}]}
