@@ -9,6 +9,7 @@ import src.eval_retrieval as eval_retrieval
 import src.fusion_search as fusion_search
 import src.rag_answer as rag_answer
 import src.vector_search as v_search
+from src.retrieval_types import Filters
 
 g_formats_arr = {"text", "json"}
 
@@ -36,6 +37,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--rerank", action="store_true")
     p.add_argument("--rerank-top-n", type=int, default=10)
     p.add_argument("--proximity-window", type=int, default=5)
+
+    p.add_argument("--filter-source", type=str, default=None)
+    p.add_argument("--filter-ext", type=str, default=None)
+    p.add_argument("--filter-source-contains", type=str, default=None)
+
     return p
 
 
@@ -90,6 +96,15 @@ def main() -> None:
         if not args.proximity_window or args.proximity_window < 1:
             die("включен режим реранкинга, но не задан proximity-window")
 
+    # создание фильтра
+    filters = Filters()
+    if args.filter_source is not None:
+        filters.source_items = str(args.filter_source).split(" ")
+    if args.filter_ext is not None:
+        filters.ext_items = str(args.filter_ext).split(" ")
+    if args.filter_source_contains is not None:
+        filters.source_contains_items = str(args.filter_source_contains).split(" ")
+
     index_bm25 = None
     index_vector = None
     if args.retriever == "bm25" or args.retriever == "fusion":
@@ -109,6 +124,7 @@ def main() -> None:
         proximity_window=args.proximity_window,
         fusion_top_n=args.fusion_top_n if args.retriever == "fusion" else 0,
         fusion_method=args.fusion_method if args.retriever == "fusion" else None,
+        filters=filters,
     )
 
     if args.format == "json":

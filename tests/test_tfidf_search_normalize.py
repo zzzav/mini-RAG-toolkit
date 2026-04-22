@@ -4,7 +4,9 @@ from src.tfidf_search import Chunk, build_index, tfidf_search
 def test_using_stop_words():
     chunks = [
         Chunk(
-            source="a", idx=0, text="Invoice #123 was issued to the client. Payment due in 7 days."
+            source="a",
+            idx=0,
+            text="Invoice #123 was issued to the client. Payment due in 7 days.",
         ),
         Chunk(source="b", idx=0, text="apple banana"),
     ]

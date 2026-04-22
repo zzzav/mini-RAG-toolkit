@@ -8,7 +8,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from src.query_normalize import DEFAULT_STOP_WORDS, normalize_query
-from src.simple_search import Chunk, build_chunks, load_text_files
+from src.retrieval_types import Chunk
+from src.simple_search import build_chunks, load_text_files
 from src.synonyms import DEFAULT_SYNONYMS, expand_tokens
 
 

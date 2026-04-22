@@ -6,6 +6,8 @@ import src.bm25_search as bm25_search
 import src.fusion_search as fusion_search
 import src.vector_search as v_search
 from src.rerank import rerank_hits
+from src.retrieval_filters import filter_hits
+from src.retrieval_types import Filters
 
 
 @dataclass
@@ -108,6 +110,7 @@ def evaluate(
     proximity_window: int = 5,
     fusion_top_n: int = 5,
     fusion_method: str | None = None,
+    filters: Filters | None = None,
 ) -> EvalReport:
     recall_list: list[float] = []
     mrr_list: list[float] = []
@@ -130,6 +133,9 @@ def evaluate(
                 hits = fusion_search.rrf_fusion(hits_vector, hits_bm25, [])
             elif fusion_method == "weighted":
                 hits = fusion_search.weighted_score_fusion(hits_vector, hits_bm25, [])
+
+        if filters is not None:
+            hits = filter_hits(hits, filters)
 
         if rerank:
             hits = rerank_hits(

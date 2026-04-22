@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from src.query_normalize import DEFAULT_STOP_WORDS, normalize_query
+from src.retrieval_types import Chunk
 
 NO_INFO_IN_CONTEXT = "В контексте нет информации."
 
@@ -25,14 +26,6 @@ CONTEXT:
 ALLOWED_LLM = {"mock", "extract", "none"}
 RETRIEVER_TYPES = {"vector", "bm25", "fusion"}
 INDEX_TYPES = {"vector", "bm25"}
-
-
-@dataclass
-class Chunk:
-    source: str
-    idx: int
-    text_preview: str
-    score: float
 
 
 @dataclass

@@ -10,6 +10,8 @@ import src.fusion_search as fusion_search
 import src.rag_answer as rag_answer
 import src.vector_search as v_search
 from src.rerank import rerank_hits
+from src.retrieval_filters import filter_hits
+from src.retrieval_types import Filters
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -45,6 +47,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     p.add_argument("--fusion-method", type=str, default="rrf", choices=fusion_search.FUSION_METHODS)
     p.add_argument("--fusion-top-n", type=int, default=5)
+
+    p.add_argument("--filter-source", type=str, default=None)
+    p.add_argument("--filter-ext", type=str, default=None)
+    p.add_argument("--filter-source-contains", type=str, default=None)
 
     return p
 
@@ -221,6 +227,16 @@ def main() -> None:
             results = fusion_search.weighted_score_fusion(results_vector, results_bm25, [])
         elif args.fusion_method == "rrf":
             results = fusion_search.rrf_fusion(results_vector, results_bm25, [])
+
+    # применение фильтра
+    filters = Filters()
+    if args.filter_source is not None:
+        filters.source_items = str(args.filter_source).split()
+    if args.filter_ext is not None:
+        filters.ext_items = str(args.filter_ext).split()
+    if args.filter_source_contains is not None:
+        filters.source_contains_items = str(args.filter_source_contains).split()
+    results = filter_hits(results, filters)
 
     # режим реранкинга результатов
     if args.rerank:

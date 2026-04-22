@@ -1,18 +1,10 @@
 import argparse
 import json
 import re
-from dataclasses import dataclass
 from pathlib import Path
 
+from src.retrieval_types import Chunk
 from src.utils import normalize_text
-
-
-@dataclass(frozen=True)
-class Chunk:
-    source: str
-    idx: int
-    text: str
-
 
 # стоп-слова
 stop_words = {"the", "a", "an", "and", "or", "to", "in", "of"}
