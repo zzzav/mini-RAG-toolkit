@@ -15,10 +15,6 @@ from src.simple_search import (
 )
 
 
-#####################################################
-# tokenize  получение перечня слов в рамках
-#           текстового блока
-#####################################################
 def tokenize(text: str, use_stop_words: bool = True) -> list[str]:
     stop_words = ()
     if use_stop_words:
@@ -26,10 +22,6 @@ def tokenize(text: str, use_stop_words: bool = True) -> list[str]:
     return normalize_query(text, stop_words=stop_words)
 
 
-#####################################################
-# count_tf  определение частоты слов в текстовом
-#           блоке
-#####################################################
 def count_tf(tokens: list[str]) -> dict[str, int]:
     tf: dict[str, int] = {}
 
@@ -39,10 +31,6 @@ def count_tf(tokens: list[str]) -> dict[str, int]:
     return tf
 
 
-#####################################################
-# build_index   построение поисковых метрик
-#
-#####################################################
 def build_index(chunks: list[Chunk], use_stop_words: bool = True) -> dict:
 
     # частота слов внутри чанков
@@ -78,14 +66,10 @@ def build_index(chunks: list[Chunk], use_stop_words: bool = True) -> dict:
     return index
 
 
-#####################################################
-# tfidf_search  поиск с использованием индексов
-#
-#####################################################
+# Ищет чанки по заранее собранному TF-IDF индексу.
 def tfidf_search(
     query: str, chunks: list[Chunk], index: dict, top_k: int = 5, use_stop_words: bool = True
 ) -> list[tuple[float, Chunk]]:
-
     scored: list[tuple[float, Chunk]] = []
 
     q_words = tokenize(query, use_stop_words)
@@ -105,40 +89,38 @@ def tfidf_search(
     return scored[:top_k]
 
 
-#####################################################
-# load_index    загрузка индекса из json
-#
-#####################################################
 def load_index(path: str) -> dict:
     raw = Path(path).read_text(encoding="utf-8")
     data = json.loads(raw)
     return data
 
 
-#####################################################
-# build_parser  построение парсера аргументов CLI
-#
-#####################################################
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Поиск на основании поисковых индексов")
     p.add_argument("--docs", type=str, required=True, help="Папка с .txt документами")
     p.add_argument("--query", type=str, help="Поисковый запрос")
-    p.add_argument("--top", type=int, default=5, help="Сколько результатов показать")
+    p.add_argument(
+        "--top-k", "--top", dest="top_k", type=int, default=5, help="Сколько результатов показать"
+    )
     p.add_argument("--chunk-size", type=int, default=400)
     p.add_argument("--overlap", type=int, default=80)
     p.add_argument(
-        "--build-index", dest="build_index", type=str, help="Построение поискового индекса"
+        "--index-out",
+        "--build-index",
+        dest="index_out_path",
+        type=str,
+        help="Построение поискового индекса",
     )
     p.add_argument(
-        "--use-index", dest="use_index", type=str, help="Использование индексов при поиске"
+        "--index-in",
+        "--use-index",
+        dest="index_in_path",
+        type=str,
+        help="Использование индексов при поиске",
     )
     return p
 
 
-#####################################################
-# main
-#
-#####################################################
 def main() -> None:
     args = build_parser().parse_args()
     docs = load_text_files(args.docs)
@@ -146,16 +128,16 @@ def main() -> None:
     results = []
     index: dict = {}
 
-    if args.build_index:
+    if args.index_out_path:
         index = build_index(chunks)
-        save_json(args.build_index, index)
+        save_json(args.index_out_path, index)
 
     if args.query:
-        if args.use_index:
-            index = load_index(args.use_index)
+        if args.index_in_path:
+            index = load_index(args.index_in_path)
             results = tfidf_search(args.query, chunks, index)
         else:
-            results = simple_search(args.query, chunks, top_k=args.top)
+            results = simple_search(args.query, chunks, top_k=args.top_k)
 
     print(f"CHUNKS={len(chunks)} RESULTS={len(results)}")
     for score, chunk in results:

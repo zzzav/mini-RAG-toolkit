@@ -1,7 +1,5 @@
 from src.vector_search import Chunk
 
-FUSION_METHODS = {"rrf", "weighted"}
-
 
 def normalize_hit_id(source: str, idx: int) -> tuple[str, int]:
     return source, idx

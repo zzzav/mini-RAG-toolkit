@@ -1,9 +1,6 @@
 import argparse
 import json
-import sys
 from dataclasses import asdict
-from pathlib import Path
-from typing import NoReturn
 
 import src.bm25_search as bm25_search
 import src.fusion_search as fusion_search
@@ -11,19 +8,28 @@ import src.rag_answer as rag_answer
 import src.vector_search as v_search
 from src.rerank import rerank_hits
 from src.retrieval_filters import filter_hits
-from src.retrieval_types import Filters
+from src.retrieval_types import (
+    ALLOWED_LLM,
+    FUSION_METHODS,
+    INDEX_TYPES,
+    OUTPUT_FORMATS,
+    RETRIEVER_TYPES,
+    Filters,
+)
+from src.utils import check_path, die, write_output
 
 
+# Собирает парсер аргументов для RAG-CLI.
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="RAG CLI")
-    p.add_argument("--llm", type=str, default="mock", choices=rag_answer.ALLOWED_LLM)
-    p.add_argument("--q", type=str)
-    p.add_argument("--index-vector", type=str, default=None)
-    p.add_argument("--index-bm25", type=str, default=None)
-    p.add_argument("--index-out", dest="index_out", default=None)
+    p.add_argument("--llm", type=str, default="mock", choices=ALLOWED_LLM)
+    p.add_argument("--query", "--q", dest="query", type=str)
+    p.add_argument("--index-vector", dest="index_vector_path", type=str, default=None)
+    p.add_argument("--index-bm25", dest="index_bm25_path", type=str, default=None)
+    p.add_argument("--index-out", dest="index_out_path", default=None)
 
-    p.add_argument("--format", type=str, default="text", choices=["text", "json"])
-    p.add_argument("--out", type=str, default=None)
+    p.add_argument("--format", type=str, default="text", choices=OUTPUT_FORMATS)
+    p.add_argument("--output", "--out", dest="output_path", type=str, default=None)
 
     p.add_argument("--show-prompt", action="store_true")
     p.add_argument("--context-only", action="store_true")
@@ -38,14 +44,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--inline-citations", action="store_true")
     p.add_argument("--for-eval-jsonl-out", action="store_true")
 
-    p.add_argument("--retriever", type=str, default="vector", choices=rag_answer.RETRIEVER_TYPES)
-    p.add_argument("--index-type", type=str, default="vector", choices=rag_answer.INDEX_TYPES)
+    p.add_argument("--retriever", type=str, default="vector", choices=RETRIEVER_TYPES)
+    p.add_argument("--index-type", type=str, default="vector", choices=INDEX_TYPES)
 
     p.add_argument("--rerank", action="store_true")
     p.add_argument("--rerank-top-n", type=int, default=10)
     p.add_argument("--proximity-window", type=int, default=5)
 
-    p.add_argument("--fusion-method", type=str, default="rrf", choices=fusion_search.FUSION_METHODS)
+    p.add_argument("--fusion-method", type=str, default="rrf", choices=FUSION_METHODS)
     p.add_argument("--fusion-top-n", type=int, default=5)
 
     p.add_argument("--filter-source", type=str, default=None)
@@ -55,11 +61,7 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
-def die(msg: str, code: int = 2) -> NoReturn:
-    print("Ошибка: " + msg, file=sys.stderr)
-    raise SystemExit(code) from None
-
-
+# Формирует текстовый ответ для RAG-режима.
 def render_text(
     res: rag_answer.RAGResult,
     show_prompt: bool,
@@ -117,13 +119,7 @@ def render_text(
     return "\n".join(lines)
 
 
-def write_output(text: str, out_path: str | None) -> None:
-    if out_path:
-        Path(out_path).write_text(text, encoding="utf-8")
-    else:
-        print(text)
-
-
+# Запускает CLI для поиска и генерации ответа.
 def main() -> None:
     args = build_parser().parse_args()
 
@@ -132,91 +128,83 @@ def main() -> None:
 
     # режим билда
     if args.docs:
-        docs = Path(args.docs)
-        if not docs.exists():
-            die(f"docs не найден: {docs}")
-        if not docs.is_dir():
-            die(f"docs должен быть директорией: {docs}")
+        docs = check_path(args.docs, entity="docs", must_be_dir=True)
         if args.chunk_size < 1:
             die("chunk-size должен быть >= 1")
         if args.overlap < 0 or args.overlap >= args.chunk_size:
             die("overlap должен быть >= 0 и меньше chunk-size")
-        if not args.index_out:
+        if not args.index_out_path:
             die("не задан index-out")
-        if args.index_vector:
+        if args.index_vector_path:
             die("index-vector нельзя передавать вместе с docs")
-        if args.index_bm25:
+        if args.index_bm25_path:
             die("index-bm25 нельзя передавать вместе с docs")
-        if args.q:
-            die("поисковой запрос q нельзя передавать вместе с docs")
+        if args.query:
+            die("поисковой запрос query нельзя передавать вместе с docs")
         if not args.index_type:
             die("не указан тип индекса для сохранения")
 
         if args.index_type == "bm25":
             index = bm25_search.build_bm25_index(
-                args.docs,
+                docs,
                 chunk_size=args.chunk_size,
                 overlap=args.overlap,
                 use_stop_words=not args.no_stop_words,
             )
-            bm25_search.save_bm25(args.index_out, index)
+            bm25_search.save_bm25(args.index_out_path, index)
         else:
             index = v_search.build_vector_index(
-                args.docs, chunk_size=args.chunk_size, overlap=args.overlap
+                docs, chunk_size=args.chunk_size, overlap=args.overlap
             )
-            v_search.save_index(args.index_out, index)
+            v_search.save_index(args.index_out_path, index)
 
         return
 
     # режим поиска
-    if not args.retriever:
-        die("не задан тип поиска")
-    if (args.retriever == "vector" or args.retriever == "fusion") and not args.index_vector:
+    if (args.retriever == "vector" or args.retriever == "fusion") and not args.index_vector_path:
         die("не задан путь к index-vector")
-    if (args.retriever == "bm25" or args.retriever == "fusion") and not args.index_bm25:
+    if (args.retriever == "bm25" or args.retriever == "fusion") and not args.index_bm25_path:
         die("не задан путь к index-bm25")
-    if not args.q:
-        die("не задан поисковой запрос q")
+    if not args.query:
+        die("не задан поисковой запрос query")
     if args.rerank:
-        if not args.rerank_top_n or args.rerank_top_n < 1:
-            die("включен режим реранкинга, но не задан rerank-top-n")
-        if not args.proximity_window or args.proximity_window < 1:
-            die("включен режим реранкинга, но не задан proximity-window")
+        if args.rerank_top_n < 1:
+            die("rerank-top-n должен быть >= 1")
+        if args.proximity_window < 1:
+            die("proximity-window должен быть >= 1")
 
     # режим смешивания результатов поиска
     if args.retriever == "fusion":
-        if not args.fusion_method:
-            die("включен режим смешивания, но не задан тип fusion-method")
-        if not args.fusion_top_n or args.fusion_top_n < 1:
-            die("включен режим смешивания, но не задан fusion-top-n")
+        if args.fusion_top_n < 1:
+            die("fusion-top-n должен быть >= 1")
 
     results = None
     initial_top_k = args.rerank_top_n if args.rerank else args.top_k
     fusion_retrieval_top_n = args.fusion_top_n
 
     if args.retriever == "bm25":
-        index = bm25_search.load_bm25(args.index_bm25)
+        index = bm25_search.load_bm25(check_path(args.index_bm25_path, entity="index-bm25"))
         results = bm25_search.bm25_search(
-            args.q, index, top_k=initial_top_k, use_synonyms=args.use_synonyms
+            args.query, index, top_k=initial_top_k, use_synonyms=args.use_synonyms
         )
     elif args.retriever == "vector":
-        index = v_search.load_index(args.index_vector)
+        index = v_search.load_index(check_path(args.index_vector_path, entity="index-vector"))
         results = v_search.search(
-            args.q,
+            args.query,
             index,
             top_k=initial_top_k,
             use_synonyms=args.use_synonyms,
             use_stop_words=not args.no_stop_words,
         )
     elif args.retriever == "fusion":
-        index = bm25_search.load_bm25(args.index_bm25)
+        index = bm25_search.load_bm25(check_path(args.index_bm25_path, entity="index-bm25"))
         results_bm25 = bm25_search.bm25_search(
-            args.q, index, top_k=fusion_retrieval_top_n, use_synonyms=args.use_synonyms
+            args.query, index, top_k=fusion_retrieval_top_n, use_synonyms=args.use_synonyms
         )
 
-        index = v_search.load_index(args.index_vector)
+        index = v_search.load_index(check_path(args.index_vector_path, entity="index-vector"))
         results_vector = v_search.search(
-            args.q,
+            args.query,
             index,
             top_k=fusion_retrieval_top_n,
             use_synonyms=args.use_synonyms,
@@ -241,7 +229,7 @@ def main() -> None:
     # режим реранкинга результатов
     if args.rerank:
         results = rerank_hits(
-            args.q,
+            args.query,
             results,
             top_k=args.top_k,
             use_stop_words=not args.no_stop_words,
@@ -254,11 +242,11 @@ def main() -> None:
         top_k=args.top_k,
     )
 
-    res = rag_answer.rag_answer(args.q, results, rag_cfg, llm=args.llm)
+    res = rag_answer.rag_answer(args.query, results, rag_cfg, llm=args.llm)
     report = asdict(res)
 
     if args.format == "json":
-        write_output(json.dumps(report, ensure_ascii=False, indent=2), args.out)
+        write_output(json.dumps(report, ensure_ascii=False, indent=2), args.output_path)
     else:
         write_output(
             render_text(
@@ -268,7 +256,7 @@ def main() -> None:
                 args.inline_citations,
                 args.for_eval_jsonl_out,
             ),
-            args.out,
+            args.output_path,
         )
 
 

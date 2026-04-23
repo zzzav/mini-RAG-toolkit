@@ -37,6 +37,7 @@ def build_vector_index(docs_dir: str, chunk_size: int, overlap: int) -> VectorIn
     return vector_index
 
 
+# Выполняет поиск по векторному индексу.
 def search(
     query: str,
     index: VectorIndex,
@@ -45,7 +46,6 @@ def search(
     use_stop_words: bool = True,
     debug: bool = False,
 ) -> list[tuple[float, Chunk]]:
-
     stop_words = ()
     if use_stop_words:
         stop_words = DEFAULT_STOP_WORDS
@@ -67,39 +67,45 @@ def search(
     return [(float(sims[i]), index.chunks[int(i)]) for i in top_idx if sims[i] > 0]
 
 
+# Сохраняет векторный индекс на диск.
 def save_index(path: str, index: VectorIndex) -> None:
     Path(path).write_bytes(pickle.dumps(index))
 
 
+# Загружает векторный индекс с диска.
 def load_index(path: str) -> VectorIndex:
     return pickle.loads(Path(path).read_bytes())
 
 
+# Собирает парсер аргументов для векторного поиска.
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Vector search (local embeddings via TF-IDF)")
-    p.add_argument("--docs", type=str, required=True)
+    p.add_argument("--docs", type=str, default=None)
     p.add_argument("--query", type=str, default=None)
-    p.add_argument("--top", type=int, default=5)
+    p.add_argument("--top-k", "--top", dest="top_k", type=int, default=5)
     p.add_argument("--chunk-size", type=int, default=400)
     p.add_argument("--overlap", type=int, default=80)
-    p.add_argument("--build-index", dest="build_index_path", default=None)
-    p.add_argument("--use-index", dest="use_index_path", default=None)
+    p.add_argument("--index-out", "--build-index", dest="index_out_path", default=None)
+    p.add_argument("--index-in", "--use-index", dest="index_in_path", default=None)
     p.add_argument("--debug", action="store_true", default=False)
     return p
 
 
+# Запускает CLI для построения индекса и/или поиска.
 def main() -> None:
     args = build_parser().parse_args()
 
-    if args.use_index_path:
-        index = load_index(args.use_index_path)
+    if args.index_in_path:
+        index = load_index(args.index_in_path)
     else:
+        if not args.docs:
+            raise SystemExit("Нужно указать --docs, если индекс не загружается из файла")
         index = build_vector_index(args.docs, chunk_size=args.chunk_size, overlap=args.overlap)
-        if args.build_index_path:
-            save_index(args.build_index_path, index)
+        if args.index_out_path:
+            save_index(args.index_out_path, index)
 
     if args.query:
-        results = search(args.query, index, top_k=args.top, debug=args.debug)
+        results = search(args.query, index, top_k=args.top_k, debug=args.debug)
         print(f"CHUNKS={len(index.chunks)} RESULTS={len(results)}")
         if results != []:
             for score, ch in results:

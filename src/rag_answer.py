@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from src.query_normalize import DEFAULT_STOP_WORDS, normalize_query
-from src.retrieval_types import Chunk
+from src.retrieval_types import ALLOWED_LLM, Chunk
 
 NO_INFO_IN_CONTEXT = "В контексте нет информации."
 
@@ -23,11 +23,8 @@ CONTEXT:
 - Если есть численные данные/сроки/факты — приведи их.
 - Если ответа нет в контексте — явно так и напиши."""
 
-ALLOWED_LLM = {"mock", "extract", "none"}
-RETRIEVER_TYPES = {"vector", "bm25", "fusion"}
-INDEX_TYPES = {"vector", "bm25"}
 
-
+# Конфигурация RAG-сборки.
 @dataclass
 class RAGConfig:
     top_k: int = 5
@@ -37,6 +34,7 @@ class RAGConfig:
     min_score: float | None = None
 
 
+# Результат RAG-ответа.
 @dataclass
 class RAGResult:
     query: str
@@ -47,14 +45,12 @@ class RAGResult:
     citations: list[dict]
 
 
-###############################################################
 # hit = {
 #   "source": str,
 #   "idx": int,
 #   "score": float,
 #   "text": str
 # }
-###############################################################
 def build_context(hits: list[dict], cfg: RAGConfig) -> str:
     context: str = ""
 
@@ -161,6 +157,7 @@ def collect_citations(hits: list[dict], *, max_items: int | None = None) -> list
     return citations
 
 
+# Заглушка LLM для локального режима.
 @dataclass
 class MockLLM:
     def generate(self, prompt: str) -> str:
@@ -180,6 +177,7 @@ class MockLLM:
         return answer
 
 
+# Правило-ориентированная модель для извлечения ответа.
 @dataclass
 class ExtractLLM:
     def generate(self, prompt: str) -> str:

@@ -10,6 +10,7 @@ from src.utils import normalize_text
 stop_words = {"the", "a", "an", "and", "or", "to", "in", "of"}
 
 
+# Собирает текстовые файлы из папки документов.
 def load_text_files(docs_dir: str) -> list[tuple[str, str]]:
     base = Path(docs_dir)
     files = sorted(base.glob("*"))
@@ -25,6 +26,7 @@ def load_text_files(docs_dir: str) -> list[tuple[str, str]]:
     return out
 
 
+# Режет текст на перекрывающиеся чанки.
 def chunk_text(text: str, chunk_size: int = 400, overlap: int = 80) -> list[str]:
     if chunk_size <= 0:
         raise ValueError("Размер чанка 0 или меньше")
@@ -50,6 +52,7 @@ def chunk_text(text: str, chunk_size: int = 400, overlap: int = 80) -> list[str]
     return chunks
 
 
+# Преобразует документы в список чанков.
 def build_chunks(docs: list[tuple[str, str]], chunk_size: int, overlap: int) -> list[Chunk]:
     chunks: list[Chunk] = []
     for name, text in docs:
@@ -59,6 +62,7 @@ def build_chunks(docs: list[tuple[str, str]], chunk_size: int, overlap: int) -> 
     return chunks
 
 
+# Оценивает релевантность чанка по простому совпадению слов.
 def score_chunk(query: str, chunk_text: str, boost_window: int = 80) -> tuple[int, str]:
     # простой скоринг: сколько “слов запроса” найдено в чанке
     q_clean = re.sub(r"[,.:;!?()]", "", query.lower())
@@ -83,6 +87,7 @@ def score_chunk(query: str, chunk_text: str, boost_window: int = 80) -> tuple[in
     return (score, context)
 
 
+# Возвращает лучшие чанки по простому поисковому скору.
 def search(query: str, chunks: list[Chunk], top_k: int = 5) -> list[tuple[int, Chunk, str]]:
     scored: list[tuple[int, Chunk, str]] = []
     for ch in chunks:
@@ -95,6 +100,7 @@ def search(query: str, chunks: list[Chunk], top_k: int = 5) -> list[tuple[int, C
     return scored[:top_k]
 
 
+# Формирует JSON-отчёт по результатам поиска.
 def build_json_report(query: str, results: list[tuple[int, Chunk, str]]) -> dict:
     report: dict = {}
     report["query"] = query
@@ -108,36 +114,41 @@ def build_json_report(query: str, results: list[tuple[int, Chunk, str]]) -> dict
     return report
 
 
+# Сохраняет JSON-отчёт в файл.
 def save_json(path: str, obj) -> None:
     Path(path).write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+# Собирает парсер аргументов для простого поиска по чанкам.
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Simple chunk search (mini-RAG without vectors)")
     p.add_argument("--docs", type=str, required=True, help="Папка с .txt документами")
     p.add_argument("--query", type=str, required=True, help="Поисковый запрос")
-    p.add_argument("--top", type=int, default=5, help="Сколько результатов показать")
+    p.add_argument(
+        "--top-k", "--top", dest="top_k", type=int, default=5, help="Сколько результатов показать"
+    )
     p.add_argument("--chunk-size", type=int, default=400)
     p.add_argument("--overlap", type=int, default=80)
-    p.add_argument("--json-out", dest="json_out", help="Итог в json")
+    p.add_argument("--output", "--json-out", dest="output_path", help="Итог в json")
     return p
 
 
+# Запускает CLI простого поиска по чанкам.
 def main() -> None:
     args = build_parser().parse_args()
     docs = load_text_files(args.docs)
     chunks = build_chunks(docs, chunk_size=args.chunk_size, overlap=args.overlap)
 
-    results = search(args.query, chunks, top_k=args.top)
+    results = search(args.query, chunks, top_k=args.top_k)
     print(f"CHUNKS={len(chunks)} RESULTS={len(results)}")
 
     for score, ch, context in results:
         # preview = normalize_text(ch.text)[:50]
         print(f"[{score}] {ch.source}#{ch.idx}: {context}...")
 
-    if args.json_out:
+    if args.output_path:
         report = build_json_report(args.query, results)
-        save_json(args.json_out, report)
+        save_json(args.output_path, report)
 
 
 if __name__ == "__main__":

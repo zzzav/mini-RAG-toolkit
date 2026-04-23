@@ -1,25 +1,17 @@
 import argparse
 import json
-import sys
-from pathlib import Path
-from typing import NoReturn
 
-import src.fusion_search as fusion_search
 from src.compare_retrievers import compare_retrievers
-
-g_formats_arr = {"text", "json"}
-
-
-def write_output(text: str, out_path: str | None) -> None:
-    if out_path:
-        Path(out_path).write_text(text, encoding="utf-8")
-    else:
-        print(text)
+from src.retrieval_types import FUSION_METHODS, OUTPUT_FORMATS
+from src.utils import check_path, die, write_output
 
 
+# Преобразует отчёт сравнения в человекочитаемый текст.
 def create_text_from_compare_report(report: dict[str, dict[str, float | int]]) -> str:
     lines: list[str] = []
-    for key, value in report.items():
+    for i, (key, value) in enumerate(report.items()):
+        if i > 0:
+            lines.append("")
         lines.append(f"{key}:")
         lines.append(f"recall@{value['k']}={value['recall_mean']}")
         lines.append(f"mrr@{value['k']}={value['mrr_mean']}")
@@ -28,16 +20,17 @@ def create_text_from_compare_report(report: dict[str, dict[str, float | int]]) -
     return "\n".join(lines)
 
 
+# Собирает парсер аргументов для сравнения ретриверов.
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description="Compare Retrievers CLI")
-    p.add_argument("--index-vector", dest="index_vector", type=str)
-    p.add_argument("--index-bm25", dest="index_bm25", type=str)
+    p = argparse.ArgumentParser(description="Сравнение retriever-ов")
+    p.add_argument("--index-vector", dest="index_vector_path", type=str)
+    p.add_argument("--index-bm25", dest="index_bm25_path", type=str)
     p.add_argument("--dataset", dest="dataset_path", type=str, required=True)
-    p.add_argument("--k", type=int, default=5)
-    p.add_argument("--format", type=str, default="text", choices=g_formats_arr)
-    p.add_argument("--out", type=str, default=None)
+    p.add_argument("--top-k", "--k", dest="top_k", type=int, default=5)
+    p.add_argument("--format", type=str, default="text", choices=OUTPUT_FORMATS)
+    p.add_argument("--output", "--out", dest="output_path", type=str, default=None)
 
-    p.add_argument("--fusion-method", type=str, default="rrf", choices=fusion_search.FUSION_METHODS)
+    p.add_argument("--fusion-method", type=str, default="rrf", choices=FUSION_METHODS)
     p.add_argument("--fusion-top-n", type=int, default=5)
 
     p.add_argument("--rerank-top-n", type=int, default=10)
@@ -45,56 +38,36 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
-def die(msg: str, code: int = 2) -> NoReturn:
-    print("Ошибка: " + msg, file=sys.stderr)
-    raise SystemExit(code) from None
-
-
+# Запускает CLI сравнения ретриверов.
 def main() -> None:
     args = build_parser().parse_args()
 
-    if args.format not in g_formats_arr:
-        die(f"format должен принимать одно из значений: {g_formats_arr}")
-    if not isinstance(args.k, int):
-        die("k должен целочисленным")
-    if args.k < 1:
-        die("k должен быть >= 1")
-    if not args.index_vector:
+    if args.top_k < 1:
+        die("top-k должен быть >= 1")
+    if not args.index_vector_path:
         die("не задан путь к index-vector")
-    if not args.index_bm25:
+    if not args.index_bm25_path:
         die("не задан путь к index-bm25")
     if not args.dataset_path:
         die("не задан путь к файлу с данными")
 
-    dataset_path = Path(args.dataset_path)
-    if not dataset_path.exists():
-        die(f"dataset не найден: {args.dataset_path}")
-    if not dataset_path.is_file():
-        die(f"dataset должен быть файлом: {args.dataset_path}")
+    check_path(args.dataset_path, entity="dataset")
 
-    if not args.fusion_method:
-        die("не задан тип fusion-method")
-    if not args.fusion_top_n or args.fusion_top_n < 1:
-        die("не задан fusion-top-n")
+    if args.fusion_top_n < 1:
+        die("fusion-top-n должен быть >= 1")
+    check_path(args.index_vector_path, entity="index-vector")
+    check_path(args.index_bm25_path, entity="index-bm25")
 
-    def check_index_path(path: str, retriever: str):
-        index_path = Path(path)
-        if not index_path.exists():
-            die(f"index-{retriever} не найден: {path}")
-
-    check_index_path(args.index_vector, "vector")
-    check_index_path(args.index_bm25, "bm25")
-
-    if not args.rerank_top_n or args.rerank_top_n < 1:
-        die("не задан rerank-top-n")
-    if not args.proximity_window or args.proximity_window < 1:
-        die("не задан proximity-window")
+    if args.rerank_top_n < 1:
+        die("rerank-top-n должен быть >= 1")
+    if args.proximity_window < 1:
+        die("proximity-window должен быть >= 1")
 
     report = compare_retrievers(
-        args.index_vector,
-        args.index_bm25,
+        args.index_vector_path,
+        args.index_bm25_path,
         args.dataset_path,
-        args.k,
+        args.top_k,
         rerank_top_n=args.rerank_top_n,
         proximity_window=args.proximity_window,
         fusion_method=args.fusion_method,
@@ -104,11 +77,10 @@ def main() -> None:
     if args.format == "json":
         write_output(
             json.dumps(report, ensure_ascii=False, indent=2),
-            args.out,
+            args.output_path,
         )
-    # text
     else:
-        write_output(create_text_from_compare_report(report), args.out)
+        write_output(create_text_from_compare_report(report), args.output_path)
 
 
 if __name__ == "__main__":

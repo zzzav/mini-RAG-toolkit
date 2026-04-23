@@ -4,6 +4,7 @@ from pathlib import Path
 from src.utils import normalize_text
 
 
+# Читает текст из строки или из файла.
 def read_text(text: str | None, in_path: str | None) -> str:
     if text:
         return text
@@ -12,6 +13,7 @@ def read_text(text: str | None, in_path: str | None) -> str:
     raise ValueError("Нужно указать --text или --in")
 
 
+# Сохраняет текст в файл или печатает его в консоль.
 def write_text(out_path: str | None, content: str) -> None:
     if out_path:
         Path(out_path).write_text(content, encoding="utf-8")
@@ -19,6 +21,7 @@ def write_text(out_path: str | None, content: str) -> None:
         print(content)
 
 
+# Считает простую статистику по исходному и нормализованному тексту.
 def calc_stats(raw: str, normalized: str) -> dict[str, int]:
     chars = len(normalized)
 
@@ -38,17 +41,34 @@ def calc_stats(raw: str, normalized: str) -> dict[str, int]:
     return {"chars": chars, "words": words, "lines": lines, "non_empty_lines": non_empty_lines}
 
 
+# Собирает парсер аргументов для CLI по текстовой нормализации.
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Нормализация текста и статистика")
     p.add_argument("--text", type=str, default=None, help="Текст прямо в командной строке")
-    p.add_argument("--in", dest="in_path", type=str, default=None, help="Путь к входному файлу")
-    p.add_argument("--out", dest="out_path", type=str, default=None, help="Путь к выходному файлу")
+    p.add_argument(
+        "--input", "--in", dest="input_path", type=str, default=None, help="Путь к входному файлу"
+    )
+    p.add_argument(
+        "--output",
+        "--out",
+        dest="output_path",
+        type=str,
+        default=None,
+        help="Путь к выходному файлу",
+    )
     p.add_argument("--lower", action="store_true", help="Привести к нижнему регистру")
     p.add_argument("--upper", action="store_true", help="Привести к верхнему регистру")
-    p.add_argument("--stats_only", action="store_true", help="Только вывести статистику")
+    p.add_argument(
+        "--stats-only",
+        "--stats_only",
+        dest="stats_only",
+        action="store_true",
+        help="Только вывести статистику",
+    )
     return p
 
 
+# Применяет верхний или нижний регистр к тексту.
 def upper_lower_text(text: str, lower: bool, upper: bool) -> str:
     if upper:
         return text.upper()
@@ -57,12 +77,13 @@ def upper_lower_text(text: str, lower: bool, upper: bool) -> str:
     return text
 
 
+# Запускает CLI нормализации текста.
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
 
     try:
-        raw = read_text(args.text, args.in_path)
+        raw = read_text(args.text, args.input_path)
     except ValueError as e:
         print(f"ERROR: {e}")
         raise SystemExit(2) from None
@@ -74,7 +95,7 @@ def main() -> None:
     stats = calc_stats(raw, normalized)
 
     if not args.stats_only:
-        write_text(args.out_path, normalized)
+        write_text(args.output_path, normalized)
 
     print(
         "STATS: "

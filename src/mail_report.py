@@ -5,6 +5,7 @@ from pathlib import Path
 from src.utils import normalize_text
 
 
+# Загружает список писем из JSON-файла.
 def load_mails(path: str) -> list[dict]:
     raw = Path(path).read_text(encoding="utf-8")
     data = json.loads(raw)
@@ -13,6 +14,7 @@ def load_mails(path: str) -> list[dict]:
     return data
 
 
+# Нормализует поля письма перед построением отчёта.
 def clean_mail(m: dict) -> dict:
     return {
         "from": normalize_text(str(m.get("from", ""))),
@@ -22,6 +24,7 @@ def clean_mail(m: dict) -> dict:
     }
 
 
+# Собирает сводку по отправителям и темам писем.
 def build_report(mails: list[dict], domain: str, skip_empty: bool) -> dict:
     empty = "(empty)"
     total = 0
@@ -52,29 +55,32 @@ def build_report(mails: list[dict], domain: str, skip_empty: bool) -> dict:
     return {"total": total, "by_sender": by_sender, "themes": themes, "top_sender": top_sender}
 
 
+# Сохраняет отчёт в JSON-файл.
 def save_json(path: str, obj: dict) -> None:
     Path(path).write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+# Собирает парсер аргументов для mail-report CLI.
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Mail report from JSON")
-    p.add_argument("--in", dest="in_path", required=True)
-    p.add_argument("--out", dest="out_path", required=True)
+    p.add_argument("--input", "--in", dest="input_path", required=True)
+    p.add_argument("--output", "--out", dest="output_path", required=True)
     p.add_argument("--domain", dest="domain", help="Отчет только по этому домену")
-    p.add_argument("--skip-empty-from", dest="skip_empty", action="store_true")
+    p.add_argument("--skip-empty-from", dest="skip_empty_from", action="store_true")
     return p
 
 
+# Запускает CLI построения отчёта по почтовому JSON.
 def main() -> None:
     args = build_parser().parse_args()
 
-    mails = load_mails(args.in_path)
+    mails = load_mails(args.input_path)
     cleaned = [clean_mail(m) for m in mails]
 
     domain = args.domain if args.domain else ""
 
-    report = build_report(cleaned, domain, args.skip_empty)
-    save_json(args.out_path, report)
+    report = build_report(cleaned, domain, args.skip_empty_from)
+    save_json(args.output_path, report)
 
     top3 = report["by_sender"][:3]
     top3_lines = []
