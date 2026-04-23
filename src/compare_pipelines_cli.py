@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import NoReturn
 
 import src.fusion_search as fusion_search
-from src.compare_retrievers import compare_retrievers
+from src.compare_pipelines import compare_pipelines
 
 g_formats_arr = {"text", "json"}
 
@@ -19,17 +19,19 @@ def write_output(text: str, out_path: str | None) -> None:
 
 def create_text_from_compare_report(report: dict[str, dict[str, float | int]]) -> str:
     lines: list[str] = []
-    for key, value in report.items():
+    for i, (key, value) in enumerate(report.items()):
+        if i > 0:
+            lines.append("")
         lines.append(f"{key}:")
-        lines.append(f"recall@{value['k']}={value['recall_mean']}")
-        lines.append(f"mrr@{value['k']}={value['mrr_mean']}")
         lines.append(f"n={value['n']}")
+        lines.append(f"contains_rate={value['contains_rate']}")
+        lines.append(f"no_info_accuracy={value['no_info_accuracy']}")
 
     return "\n".join(lines)
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description="Compare Retrievers CLI")
+    p = argparse.ArgumentParser(description="Compare Pipelines CLI")
     p.add_argument("--index-vector", dest="index_vector", type=str)
     p.add_argument("--index-bm25", dest="index_bm25", type=str)
     p.add_argument("--dataset", dest="dataset_path", type=str, required=True)
@@ -81,6 +83,8 @@ def main() -> None:
         index_path = Path(path)
         if not index_path.exists():
             die(f"index-{retriever} не найден: {path}")
+        if not index_path.is_file():
+            die(f"index-{retriever} не является файлом: {path}")
 
     check_index_path(args.index_vector, "vector")
     check_index_path(args.index_bm25, "bm25")
@@ -90,7 +94,7 @@ def main() -> None:
     if not args.proximity_window or args.proximity_window < 1:
         die("не задан proximity-window")
 
-    report = compare_retrievers(
+    report = compare_pipelines(
         args.index_vector,
         args.index_bm25,
         args.dataset_path,

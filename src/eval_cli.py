@@ -99,11 +99,11 @@ def main() -> None:
     # создание фильтра
     filters = Filters()
     if args.filter_source is not None:
-        filters.source_items = str(args.filter_source).split(" ")
+        filters.source_items = str(args.filter_source).split()
     if args.filter_ext is not None:
-        filters.ext_items = str(args.filter_ext).split(" ")
+        filters.ext_items = str(args.filter_ext).split()
     if args.filter_source_contains is not None:
-        filters.source_contains_items = str(args.filter_source_contains).split(" ")
+        filters.source_contains_items = str(args.filter_source_contains).split()
 
     index_bm25 = None
     index_vector = None
